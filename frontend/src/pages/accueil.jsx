@@ -1,0 +1,39 @@
+import NavBar from '../composent/navBar';
+import PrendreRendezVous from '../composent/buttonRDV';
+import ServiceCard from '../composent/ServiceCard';
+
+function Accueil() {
+    return (
+        <div className="grid grid-rows-[80%_20%] h-screen">
+
+            <div className="grid grid-cols-[50%_50%] w-full">
+                <div>
+                  <NavBar />
+                  <div className="block">
+                    <p className="font-bold text-jaune text-4xl mt-16 ml-16">Bienvenue sur AGSP,</p>
+                    <p className="text-black text-2xl ml-16 mt-2">Application de Gestion des Services Publics,</p>
+                    <p className="text-black text-2xl ml-16 mt-7">
+                      Réservez un rendez-vous avec un service public pour la création de vos papiers administratifs.
+                    </p>
+                    <div className="mt-12 ml-16"><PrendreRendezVous /></div>
+                  </div>
+                </div>
+
+                <div className="bg-vert flex items-center justify-center">
+                  <div className="w-48 h-48 rounded-full bg-white/10 flex items-center justify-center">
+                    <span className="text-white text-6xl">🏛️</span>
+                  </div>
+                </div>
+            </div>
+
+            <div className="bg-jaune/10 flex items-center gap-6 px-16">
+                <ServiceCard titre="Etat civil" sousTitre="Mairie centrale" administrationId={1} />
+                <ServiceCard titre="Titres et cartes" sousTitre="Préfecture" administrationId={2} />
+                <ServiceCard titre="Aides sociales" sousTitre="Affaires sociales" administrationId={3} />
+            </div>
+
+        </div>
+    );
+}
+
+export default Accueil;
