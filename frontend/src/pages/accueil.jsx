@@ -1,6 +1,7 @@
 import NavBar from '../composent/navBar';
 import PrendreRendezVous from '../composent/buttonRDV';
 import ServiceCard from '../composent/ServiceCard';
+import { Link } from "react-router-dom";
 
 function Accueil() {
     return (
@@ -24,6 +25,11 @@ function Accueil() {
                     <span className="text-white text-6xl">🏛️</span>
                   </div>
                 </div>
+            </div>
+            <div className="text-center py-3">
+              <Link to="/agent/connexion" className="text-xs text-gray-400 hover:text-vert transition-colors">
+                Espace agent
+              </Link>
             </div>
 
             <div className="bg-jaune/10 flex items-center gap-6 px-16">
