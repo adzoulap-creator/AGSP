@@ -27,16 +27,11 @@ function Accueil() {
                 </div>
             </div>
             <div className="text-center py-3">
-              <Link to="/agent/connexion" className="text-xs text-gray-400 hover:text-vert transition-colors">
+              <Link to="/agent/connexion" className="text-xs text-gray-700 hover:text-vert transition-colors">
                 Espace agent
               </Link>
             </div>
 
-            <div className="bg-jaune/10 flex items-center gap-6 px-16">
-                <ServiceCard titre="Etat civil" sousTitre="Mairie centrale" administrationId={1} />
-                <ServiceCard titre="Titres et cartes" sousTitre="Préfecture" administrationId={2} />
-                <ServiceCard titre="Aides sociales" sousTitre="Affaires sociales" administrationId={3} />
-            </div>
 
         </div>
     );

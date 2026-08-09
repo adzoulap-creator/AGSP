@@ -27,8 +27,7 @@ function Confirmation() {
           <span className="text-white text-3xl">✓</span>
         </div>
 
-        <h1 className="font-bold text-vert-dark text-3xl mb-2">Rendez-vous confirmé</h1>
-        <p className="text-gray-500 mb-10">Un code de suivi vous a été envoyé par email</p>
+        <h1 className="font-bold text-vert-dark text-3xl mb-2">Rendez-vous en attente de Confirmation</h1>
 
         <div className="bg-white rounded-2xl shadow-sm p-6 text-left flex flex-col gap-4">
           <div className="flex justify-between">
@@ -46,10 +45,6 @@ function Confirmation() {
           <div className="flex justify-between">
             <span className="text-gray-400">Heure</span>
             <span className="font-medium text-vert-dark">{creneau.heure.slice(0, 5)}</span>
-          </div>
-          <div className="flex justify-between pt-4 border-t border-gray-100">
-            <span className="text-gray-400">Code de suivi</span>
-            <span className="font-bold text-vert-dark">{codeSuivi}</span>
           </div>
         </div>
 

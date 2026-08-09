@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.db import transaction, IntegrityError
 import uuid
-
+from django.core.mail import send_mail
 
 class AdministrationListView(generics.ListAPIView):
     queryset = Administration.objects.filter(actif=True)
@@ -188,5 +188,16 @@ class CreerRendezVousView(APIView):
                 cle_idempotence=cle_idempotence,
             )
 
+        try:
+            send_mail(
+                subject="Votre rendez-vous est en attente de confirmation",
+                message=f"Bonjour {prenom},\n\nVotre demande de rendez-vous pour \"{creneau.demarche.nom}\" auprès de {creneau.demarche.administration.nom} a bien été enregistrée pour le {creneau.date} à {creneau.heure}.\n\nElle est actuellement en attente de confirmation par un agent. Vous recevrez un second email dès que votre rendez-vous sera confirmé.\n\nMerci.",
+                from_email=None,
+                recipient_list=[email],
+            )
+        except Exception as erreur:
+            print(f"Échec envoi email en attente : {erreur}")
+
         return Response({"id": rdv.id}, status=status.HTTP_201_CREATED)
+    
 # Create your views here.
