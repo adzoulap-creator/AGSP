@@ -93,28 +93,43 @@ function ChoixCreneau() {
   };
 
   return (
-    <div className="min-h-screen bg-jaune/5">
+    <div className="min-h-screen bg-[#F7F5EF]">
       <NavBar />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="font-bold text-vert-dark text-3xl mb-8">Choisissez un créneau</h1>
+      <div className="max-w-4xl mx-auto px-6 pt-10">
+        <div className="flex items-center gap-2 text-xs text-[#5B6B62]">
+          <span className="text-vert font-semibold">Étape 3 sur 5</span>
+          <span>·</span>
+          <span>Choix du créneau</span>
+        </div>
+        <div className="flex gap-1.5 mt-3 mb-10">
+          <div className="h-1 flex-1 rounded-full bg-vert"></div>
+          <div className="h-1 flex-1 rounded-full bg-vert"></div>
+          <div className="h-1 flex-1 rounded-full bg-vert"></div>
+          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
+          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
+        </div>
+      </div>
 
-        <div className="flex gap-10 items-start">
-          <div className="flex-1">
+      <div className="max-w-4xl mx-auto px-6 pb-16">
+        <h1 className="font-['Fraunces',serif] text-3xl text-[#14201C] mb-8">Choisissez un créneau</h1>
+
+        <div className="flex gap-10 items-start flex-wrap">
+          <div className="flex-1 min-w-[280px]">
 
             <div className="flex gap-6 items-start flex-wrap">
 
               {!jourSelectionne && (
-                <div className="bg-white rounded-2xl shadow-sm p-5 w-full max-w-sm">
+                <div className="bg-white rounded-lg border border-[#DDD7C7] p-5 w-full max-w-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <button onClick={() => changerMois(-1)} className="text-gray-400 hover:text-vert px-2">‹</button>
+                    <button onClick={() => changerMois(-1)} className="text-[#5B6B62] hover:text-vert px-2">‹</button>
                     <p className="font-semibold text-vert-dark capitalize">{NOMS_MOIS[mois]} {annee}</p>
-                    <button onClick={() => changerMois(1)} className="text-gray-400 hover:text-vert px-2">›</button>
+                    <button onClick={() => changerMois(1)} className="text-[#5B6B62] hover:text-vert px-2">›</button>
                   </div>
 
                   <div className="grid grid-cols-7 gap-1 mb-1">
                     {NOMS_JOURS.map((j) => (
-                      <p key={j} className="text-center text-xs text-gray-400 font-medium">{j}</p>
+                      <p key={j} className="text-center text-xs text-[#9AA39C] font-medium">{j}</p>
                     ))}
                   </div>
 
@@ -134,8 +149,8 @@ function ChoixCreneau() {
                             estChoisi
                               ? "aspect-square rounded-full bg-vert text-white text-sm font-semibold"
                               : selectionnable
-                              ? `aspect-square rounded-full text-sm hover:bg-jaune/30 ${estAujourdHui ? "border border-vert text-vert-dark font-semibold" : "text-gray-700"}`
-                              : "aspect-square rounded-full text-sm text-gray-300 cursor-not-allowed"
+                              ? `aspect-square rounded-full text-sm hover:bg-jaune/20 ${estAujourdHui ? "border border-vert text-vert-dark font-semibold" : "text-[#3C4A42]"}`
+                              : "aspect-square rounded-full text-sm text-[#C7C1AE] cursor-not-allowed"
                           }
                         >
                           {date.getDate()}
@@ -147,9 +162,9 @@ function ChoixCreneau() {
               )}
 
               {jourSelectionne && (
-                <div className="bg-white rounded-2xl shadow-sm p-5 w-full max-w-xs">
+                <div className="bg-white rounded-lg border border-[#DDD7C7] p-5 w-full max-w-xs">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-500 capitalize">
+                    <p className="text-sm text-[#5B6B62] capitalize">
                       {jourSelectionne.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                     </p>
                     <button onClick={() => setJourSelectionne(null)} className="text-xs text-vert hover:underline">
@@ -163,7 +178,7 @@ function ChoixCreneau() {
 
                       if (pris) {
                         return (
-                          <button key={heure} disabled className="bg-red-50 text-red-400 py-2 rounded-full border border-red-200 cursor-not-allowed line-through text-sm">
+                          <button key={heure} disabled className="bg-red-50 text-red-400 py-2 rounded-md border border-red-200 cursor-not-allowed line-through text-sm">
                             {heure}
                           </button>
                         );
@@ -174,8 +189,8 @@ function ChoixCreneau() {
                           onClick={() => setHeureSelectionnee(heure)}
                           className={
                             selectionne
-                              ? "bg-jaune text-vert-dark font-semibold py-2 rounded-full text-sm"
-                              : "bg-white text-gray-700 py-2 rounded-full border border-gray-200 hover:border-vert text-sm"
+                              ? "bg-jaune text-vert-dark font-semibold py-2 rounded-md text-sm"
+                              : "bg-white text-[#3C4A42] py-2 rounded-md border border-[#DDD7C7] hover:border-vert text-sm"
                           }
                         >
                           {heure}
@@ -188,28 +203,32 @@ function ChoixCreneau() {
 
             </div>
 
-            {erreur && <p className="text-red-500 mt-4">{erreur}</p>}
+            {erreur && (
+              <div className="bg-white border border-red-200 rounded-lg px-6 py-4 mt-4">
+                <p className="text-red-600 text-sm">{erreur}</p>
+              </div>
+            )}
           </div>
 
           <div className="w-64 shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm p-6 sticky top-12">
-              <p className="text-sm text-gray-400 mb-3">RÉCAPITULATIF</p>
+            <div className="bg-white rounded-lg border border-[#DDD7C7] p-6 sticky top-8">
+              <p className="text-xs tracking-[0.15em] uppercase text-[#5B6B62] font-semibold mb-3">Récapitulatif</p>
               {heureSelectionnee ? (
                 <>
                   <p className="font-semibold text-vert-dark capitalize">
                     {jourSelectionne.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                   </p>
-                  <p className="text-gray-600">{heureSelectionnee}</p>
+                  <p className="text-[#5B6B62]">{heureSelectionnee}</p>
                   <button
                     onClick={continuer}
                     disabled={envoi}
-                    className="mt-4 bg-vert hover:bg-vert-dark text-white px-6 py-2 rounded-full font-medium transition-colors w-full disabled:opacity-50"
+                    className="mt-4 bg-vert hover:bg-vert-dark text-white px-6 py-2.5 rounded-md font-medium transition-colors w-full disabled:opacity-50"
                   >
                     {envoi ? "Réservation..." : "Continuer"}
                   </button>
                 </>
               ) : (
-                <p className="text-gray-400 text-sm">
+                <p className="text-[#9AA39C] text-sm">
                   {jourSelectionne ? "Sélectionnez une heure." : "Sélectionnez d'abord un jour."}
                 </p>
               )}

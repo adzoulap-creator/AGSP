@@ -1,7 +1,7 @@
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 export async function getAdministrations() {
-  const reponse = await fetch(`${API_BASE_URL}/citoyens/administrations/`);
+  const reponse = await fetch(`${API_BASE_URL}/citoyens/administrations/`, { cache: "no-store" });
   if (!reponse.ok) {
     throw new Error("Erreur lors du chargement des administrations");
   }
@@ -9,7 +9,7 @@ export async function getAdministrations() {
 }
 
 export async function getDemarches(administrationId) {
-  const reponse = await fetch(`${API_BASE_URL}/citoyens/demarches/?administration=${administrationId}`);
+  const reponse = await fetch(`${API_BASE_URL}/citoyens/demarches/?administration=${administrationId}`, { cache: "no-store" });
   if (!reponse.ok) {
     throw new Error("Erreur lors du chargement des démarches");
   }
@@ -17,7 +17,7 @@ export async function getDemarches(administrationId) {
 }
 
 export async function getCreneauxPris(demarcheId) {
-  const reponse = await fetch(`${API_BASE_URL}/citoyens/creneaux/pris/?demarche=${demarcheId}`);
+  const reponse = await fetch(`${API_BASE_URL}/citoyens/creneaux/pris/?demarche=${demarcheId}`, { cache: "no-store" });
   if (!reponse.ok) throw new Error("Erreur lors du chargement des créneaux");
   return reponse.json();
 }
@@ -27,6 +27,7 @@ export async function reserverCreneau(demarcheId, dateHeureISO) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ demarche: demarcheId, date_heure: dateHeureISO }),
+    cache: "no-store",
   });
   if (reponse.status === 409) throw new Error("Ce créneau vient d'être pris, choisissez-en un autre.");
   if (!reponse.ok) throw new Error("Erreur lors de la réservation du créneau");
@@ -34,7 +35,7 @@ export async function reserverCreneau(demarcheId, dateHeureISO) {
 }
 
 export async function getCreneauDetail(creneauId) {
-  const reponse = await fetch(`${API_BASE_URL}/citoyens/creneaux/${creneauId}/`);
+  const reponse = await fetch(`${API_BASE_URL}/citoyens/creneaux/${creneauId}/`, { cache: "no-store" });
   if (!reponse.ok) {
     throw new Error("Erreur lors du chargement du créneau");
   }
@@ -46,6 +47,7 @@ export async function creerRendezVous(payload) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    cache: "no-store",
   });
   if (!reponse.ok) {
     const data = await reponse.json().catch(() => ({}));
@@ -59,6 +61,7 @@ export async function connexionAgent(username, password) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
+    cache: "no-store",
   });
   if (!reponse.ok) {
     throw new Error("Identifiants invalides.");
@@ -70,6 +73,7 @@ export async function getRendezVousAgent() {
   const token = localStorage.getItem("agentToken");
   const reponse = await fetch(`${API_BASE_URL}/agents/rendez-vous/`, {
     headers: { "Authorization": `Token ${token}` },
+    cache: "no-store",
   });
   if (!reponse.ok) throw new Error("Erreur lors du chargement des rendez-vous");
   return reponse.json();
@@ -80,6 +84,7 @@ export async function confirmerRendezVous(rdvId) {
   const reponse = await fetch(`${API_BASE_URL}/agents/rendez-vous/${rdvId}/confirmer/`, {
     method: "POST",
     headers: { "Authorization": `Token ${token}` },
+    cache: "no-store",
   });
   if (!reponse.ok) throw new Error("Erreur lors de la confirmation");
   return reponse.json();
@@ -90,6 +95,7 @@ export async function annulerRendezVous(rdvId) {
   const reponse = await fetch(`${API_BASE_URL}/agents/rendez-vous/${rdvId}/annuler/`, {
     method: "POST",
     headers: { "Authorization": `Token ${token}` },
+    cache: "no-store",
   });
   if (!reponse.ok) throw new Error("Erreur lors de l'annulation");
   return reponse.json();

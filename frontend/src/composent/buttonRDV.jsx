@@ -1,5 +1,4 @@
 import {Link} from 'react-router-dom';
-import '../assets/style/component.css';
 
 function PrendreRendezVous(){
 
