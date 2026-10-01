@@ -7,7 +7,7 @@ function NavBar() {
   const liens = [
     { label: "Accueil", chemin: "/" },
     { label: "Démarches", chemin: "/administrations" },
-    { label: "Suivi", chemin: "/suivi" },
+    { label: "A propos de nous", chemin: "about" },
   ];
 
   return (

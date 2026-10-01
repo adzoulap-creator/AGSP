@@ -8,6 +8,7 @@ import Formulaire from "./pages/formulaire";
 import Confirmation from "./pages/confirmation";
 import AgentConnexion from "./pages/agentConnexion";
 import TableauDeBord from "./pages/TableauDeBord";
+import About from "./pages/about";
 
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
           <Route path="/confirmation" element={<Confirmation/>} />
           <Route path="/agent/connexion" element={<AgentConnexion/>} />
           <Route path="/agent/tableau-de-bord" element={<TableauDeBord/>} />
+          <Route path="/About" element={<About/>} />
           
 
         </Routes>
