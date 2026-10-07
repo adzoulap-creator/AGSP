@@ -55,12 +55,17 @@ class ConfirmerRendezVousView(APIView):
         rdv.statut = 'valide'
         rdv.save()
 
-        send_mail(
-            subject="Votre rendez-vous a été confirmé",
-            message=f"Bonjour {rdv.prenom},\n\nVotre rendez-vous pour \"{rdv.creneau.demarche.nom}\" auprès de {agent.administration.nom} a été CONFIRMÉ, le {rdv.creneau.date} à {rdv.creneau.heure}.\n\nMerci.",
-            from_email=None,
-            recipient_list=[rdv.email],
-        )
+        # Le statut est déjà enregistré : si l'email ne part pas, on le note
+        # dans les logs mais on ne fait pas échouer la requête de l'agent.
+        try:
+            send_mail(
+                subject="Votre rendez-vous a été confirmé",
+                message=f"Bonjour {rdv.prenom},\n\nVotre rendez-vous pour \"{rdv.creneau.demarche.nom}\" auprès de {agent.administration.nom} a été CONFIRMÉ, le {rdv.creneau.date} à {rdv.creneau.heure}.\n\nMerci.",
+                from_email=None,
+                recipient_list=[rdv.email],
+            )
+        except Exception as erreur:
+            print(f"Échec envoi email de confirmation : {erreur}")
         return Response({"detail": "Rendez-vous confirmé."})
 
 
@@ -77,12 +82,17 @@ class AnnulerRendezVousView(APIView):
         rdv.statut = 'refuse'
         rdv.save()
 
-        send_mail(
-            subject="Votre rendez-vous a été annulé",
-            message=f"Bonjour {rdv.prenom},\n\nVotre rendez-vous pour \"{rdv.creneau.demarche.nom}\" auprès de {agent.administration.nom} a été ANNULÉ, initialement prévu le {rdv.creneau.date} à {rdv.creneau.heure}.\n\nMerci.",
-            from_email=None,
-            recipient_list=[rdv.email],
-        )
+        # Le statut est déjà enregistré : si l'email ne part pas, on le note
+        # dans les logs mais on ne fait pas échouer la requête de l'agent.
+        try:
+            send_mail(
+                subject="Votre rendez-vous a été annulé",
+                message=f"Bonjour {rdv.prenom},\n\nVotre rendez-vous pour \"{rdv.creneau.demarche.nom}\" auprès de {agent.administration.nom} a été ANNULÉ, initialement prévu le {rdv.creneau.date} à {rdv.creneau.heure}.\n\nMerci.",
+                from_email=None,
+                recipient_list=[rdv.email],
+            )
+        except Exception as erreur:
+            print(f"Échec envoi email d'annulation : {erreur}")
         return Response({"detail": "Rendez-vous annulé."})
     
 # Create your views here.
