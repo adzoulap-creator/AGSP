@@ -147,11 +147,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_USE_TLS = False
-DEFAULT_FROM_EMAIL = 'AGSP <adzoulap@gmail.com>'
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+# Tout se règle dans le .env ; sans valeur, on garde la config Gmail (SSL sur 465).
+# SSL et TLS ne peuvent pas être actifs en même temps : SSL n'est activé par
+# défaut que si TLS ne l'est pas.
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=not EMAIL_USE_TLS, cast=bool)
+EMAIL_PORT = config('EMAIL_PORT', default=587 if EMAIL_USE_TLS else 465, cast=int)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='AGSP <adzoulap@gmail.com>')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+# Évite qu'un serveur mail qui ne répond pas bloque la requête indéfiniment.
+EMAIL_TIMEOUT = 10
+
+# Sans identifiants SMTP (cas d'une installation en local), les emails
+# sont affichés dans le terminal du serveur au lieu d'être envoyés.
+if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
