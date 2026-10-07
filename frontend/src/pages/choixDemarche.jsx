@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import NavBar from "../composent/navBar";
+import ParcoursEtapes from "../composent/ParcoursEtapes";
 import DemarcheCard from "../composent/DemarcheCard";
 import { getDemarches } from "../services/api";
 
@@ -21,20 +22,8 @@ function ChoixDemarche() {
     <div className="min-h-screen bg-[#F7F5EF]">
       <NavBar />
 
-      <div className="max-w-3xl mx-auto px-6 pt-10">
-        <div className="flex items-center gap-2 text-xs text-[#5B6B62]">
-          <span className="text-vert font-semibold">Étape 2 sur 5</span>
-          <span>·</span>
-          <span>Choix de la démarche</span>
-        </div>
-        <div className="flex gap-1.5 mt-3 mb-10">
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-        </div>
-      </div>
+      <title>Choisir une démarche · AGSP</title>
+      <ParcoursEtapes etape={2} />
 
       <div className="max-w-3xl mx-auto px-6 pb-16">
         <h1 className="font-['Fraunces',serif] text-3xl text-[#14201C] mb-8">

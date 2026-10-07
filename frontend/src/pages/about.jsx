@@ -2,6 +2,7 @@ function About() {
 
     return (
         <div className="bg-[#F7F5F0] min-h-screen">
+            <title>À propos · AGSP</title>
             <section className="max-w-5xl mx-auto px-6 pt-20 pb-16">
                 <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full mb-6">
                     À PROPOS DE NOUS

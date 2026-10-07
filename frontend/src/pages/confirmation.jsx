@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import NavBar from "../composent/navBar";
+import ParcoursEtapes from "../composent/ParcoursEtapes";
 
 function Confirmation() {
   const location = useLocation();
@@ -22,20 +23,8 @@ function Confirmation() {
     <div className="min-h-screen bg-[#F7F5EF]">
       <NavBar />
 
-      <div className="max-w-4xl mx-auto px-6 pt-10">
-        <div className="flex items-center gap-2 text-xs text-[#5B6B62]">
-          <span className="text-vert font-semibold">Étape 5 sur 5</span>
-          <span>·</span>
-          <span>Confirmation</span>
-        </div>
-        <div className="flex gap-1.5 mt-3 mb-10">
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-        </div>
-      </div>
+      <title>Rendez-vous enregistré · AGSP</title>
+      <ParcoursEtapes etape={5} />
 
       <div className="max-w-lg mx-auto px-6 pb-16 text-center">
         <div className="w-16 h-16 rounded-full border-2 border-vert flex items-center justify-center mx-auto mb-6">
@@ -70,7 +59,7 @@ function Confirmation() {
         </div>
 
         <p className="text-xs text-[#9AA39C] mt-6">
-          Conservez votre code de dossier <span className="font-medium text-[#5B6B62]">{codeSuivi}</span> pour suivre l'avancement de votre démarche.
+          Vous recevrez un email dès qu'un agent aura traité votre demande.
         </p>
 
         <Link
