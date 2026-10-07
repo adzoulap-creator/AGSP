@@ -1,6 +1,5 @@
 import NavBar from '../composent/navBar';
 import PrendreRendezVous from '../composent/buttonRDV';
-import ServiceCard from '../composent/ServiceCard';
 import logoAgsp from "../assets/logo.png";
 import { Link } from "react-router-dom";
 

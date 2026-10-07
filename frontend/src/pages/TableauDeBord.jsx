@@ -3,9 +3,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import {
-  Bell,CalendarDays,CheckCircle2,ChevronDown,Clock3,
+  CalendarDays,CheckCircle2,Clock3,
   FileText,FolderOpen,Hourglass,LayoutDashboard,
-  Loader2,LogOut,Mail,Menu,MoreVertical,Search,Settings,UserRound,Users,XCircle,
+  Loader2,LogOut,Menu,MoreVertical,Search,Users,XCircle,
 } from "lucide-react";
 
 import {
@@ -41,10 +41,6 @@ function TableauDeBord() {
   const [vueActive, setVueActive] = useState("Tableau de bord");
   const [periodeDossiers, setPeriodeDossiers] = useState("jour");
 
-  useEffect(() => {
-    chargerRendezVous();
-  }, []);
-
   const chargerRendezVous = async () => {
     setChargement(true);
     setErreur(null);
@@ -58,6 +54,15 @@ function TableauDeBord() {
       setChargement(false);
     }
   };
+
+  // Premier chargement : chargement vaut déjà true et erreur null au départ,
+  // on met seulement à jour l'état quand la réponse arrive.
+  useEffect(() => {
+    getRendezVousAgent()
+      .then((data) => setRendezVous(Array.isArray(data) ? data : []))
+      .catch((err) => setErreur(err.message || "Impossible de charger les rendez-vous."))
+      .finally(() => setChargement(false));
+  }, []);
 
   const gererConfirmer = async (rdvId) => {
     setEnCours(rdvId);
