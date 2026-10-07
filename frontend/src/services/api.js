@@ -16,6 +16,14 @@ export async function getDemarches(administrationId) {
   return reponse.json();
 }
 
+export async function getToutesDemarches() {
+  const reponse = await fetch(`${API_BASE_URL}/citoyens/demarches/`, { cache: "no-store" });
+  if (!reponse.ok) {
+    throw new Error("Erreur lors du chargement des démarches");
+  }
+  return reponse.json();
+}
+
 export async function getCreneauxPris(demarcheId) {
   const reponse = await fetch(`${API_BASE_URL}/citoyens/creneaux/pris/?demarche=${demarcheId}`, { cache: "no-store" });
   if (!reponse.ok) throw new Error("Erreur lors du chargement des créneaux");
