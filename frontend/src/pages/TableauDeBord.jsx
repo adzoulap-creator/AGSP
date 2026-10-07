@@ -14,7 +14,7 @@ import {
   annulerRendezVous,
 } from "../services/api";
 
-import logoAgsp from "../assets/logo.png";
+import SceauAGSP from "../composent/SceauAGSP";
 
 const ONGLETS = [
   { cle: "en_attente", label: "En attente", couleur: "jaune" },
@@ -283,6 +283,7 @@ function TableauDeBord() {
 
   return (
     <div className="min-h-screen bg-[#EEF8F8] text-[#14352D]">
+      <title>Tableau de bord agent · AGSP</title>
       <div className="flex min-h-screen">
 
         <aside
@@ -294,9 +295,8 @@ function TableauDeBord() {
           <div>
             <div className="relative z-10 border-b border-white/10 px-6 pb-5 pt-7">
               <div className="flex flex-col items-center gap-3 text-center">
-                <img
-                    src={logoAgsp}
-                    alt="Sceau AGSP - République du Congo"
+                <SceauAGSP
+                    complet={false}
                     className="w-25 h-25 mx-auto animate-[float_2s_ease-in-out_infinite]"
                 />
                 <style>{`
@@ -307,7 +307,7 @@ function TableauDeBord() {
                 `}</style>
 
                 <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight">
+                  <h1 className="font-titre text-2xl font-semibold tracking-tight">
                     AGSP
                   </h1>
                   <p className="text-sm font-semibold leading-4 text-white/90">
@@ -437,8 +437,8 @@ function TableauDeBord() {
             {vueActive === "Tableau de bord" && (
             <section className="mb-7">
 
-              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-[#0D4F3C] sm:text-3xl">
-                Bienvenu Agent, {nom}
+              <h2 className="mt-1 font-titre text-2xl font-semibold tracking-tight text-[#0D4F3C] sm:text-3xl">
+                Bienvenue, {nom}
               </h2>
 
               <p className="mt-2 text-sm text-[#66817A]">

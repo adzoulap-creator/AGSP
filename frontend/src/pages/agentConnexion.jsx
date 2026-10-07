@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { connexionAgent } from "../services/api";
 import { Link } from "react-router-dom";
-import logoAgsp from "../assets/logo.png";
+import SceauAGSP from "../composent/SceauAGSP";
 
 function AgentConnexion() {
   const navigate = useNavigate();
@@ -33,6 +33,7 @@ function AgentConnexion() {
 
   return (
     <div className="min-h-screen bg-[#eef8f8] flex items-center justify-center p-4">
+      <title>Connexion agent · AGSP</title>
       <div className="w-full max-w-5xl overflow-hidden rounded-[30px] bg-white shadow-2xl md:h-[600px]">
         <div className="grid min-h-[600px] md:grid-cols-2">
 
@@ -46,9 +47,8 @@ function AgentConnexion() {
 
             <div className="relative z-10">
               
-              <img
-                  src={logoAgsp}
-                  alt="Sceau AGSP - République du Congo"
+              <SceauAGSP
+                  label="Sceau AGSP, République du Congo, service public"
                   className="w-64 h-64 mx-auto animate-[float_2s_ease-in-out_infinite]"
               />
               <style>{`
@@ -58,7 +58,7 @@ function AgentConnexion() {
                   }
               `}</style>
 
-              <h2 className="mb-3 text-3xl font-bold">
+              <h2 className="mb-3 font-titre text-3xl font-semibold">
                 Bienvenue !
               </h2>
 
@@ -91,7 +91,7 @@ function AgentConnexion() {
           <div className="flex items-center justify-center bg-white px-6 py-10 sm:px-12">
             <div className="w-full max-w-md">
               <div className="mb-8 text-center md:text-left">
-                <h1 className="text-3xl font-bold text-[#14201c]">
+                <h1 className="font-titre text-3xl font-semibold text-[#14201c]">
                   Connexion
                 </h1>
 
