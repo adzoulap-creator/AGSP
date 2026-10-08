@@ -113,10 +113,14 @@ class ReserverCreneauView(APIView):
         if timezone.is_naive(date_heure):
             date_heure = timezone.make_aware(date_heure)
 
-        try:
-            demarche = Demarche.objects.get(id=demarche_id)
-        except Demarche.DoesNotExist:
-            return Response({"detail": "Démarche introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        # Une démarche suspendue par un agent n'est plus réservable, même depuis
+        # un lien gardé en favori ou une page restée ouverte.
+        demarche = Demarche.objects.filter(id=demarche_id, actif=True, administration__actif=True).first()
+        if demarche is None:
+            return Response(
+                {"detail": "Cette démarche n'existe pas ou n'est plus proposée en ligne."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         try:
             with transaction.atomic():
@@ -174,6 +178,12 @@ class CreerRendezVousView(APIView):
             creneau = Creneau.objects.get(id=creneau_id)
         except Creneau.DoesNotExist:
             return Response({"detail": "Créneau introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not (creneau.demarche.actif and creneau.demarche.administration.actif):
+            return Response(
+                {"detail": "Cette démarche n'est plus proposée en ligne : le rendez-vous ne peut pas être pris."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         if hasattr(creneau, "rendez_vous"):
             return Response({"detail": "Ce créneau est déjà pris."}, status=status.HTTP_409_CONFLICT)

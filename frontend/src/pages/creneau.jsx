@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import NavBar from "../composent/navBar";
+import ParcoursEtapes from "../composent/ParcoursEtapes";
 import { getCreneauxPris, reserverCreneau } from "../services/api";
 
 const HEURES_FIXES = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00"];
@@ -96,20 +97,8 @@ function ChoixCreneau() {
     <div className="min-h-screen bg-[#F7F5EF]">
       <NavBar />
 
-      <div className="max-w-4xl mx-auto px-6 pt-10">
-        <div className="flex items-center gap-2 text-xs text-[#5B6B62]">
-          <span className="text-vert font-semibold">Étape 3 sur 5</span>
-          <span>·</span>
-          <span>Choix du créneau</span>
-        </div>
-        <div className="flex gap-1.5 mt-3 mb-10">
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-        </div>
-      </div>
+      <title>Choisir un créneau · AGSP</title>
+      <ParcoursEtapes etape={3} />
 
       <div className="max-w-4xl mx-auto px-6 pb-16">
         <h1 className="font-['Fraunces',serif] text-3xl text-[#14201C] mb-8">Choisissez un créneau</h1>

@@ -5,4 +5,18 @@
   --color-vert: #1B7A3D;
   --color-vert-dark: #145C2E;
   --color-jaune: #F4C430;
+
+  /* Couleurs relevées sur le sceau AGSP et le drapeau */
+  --color-sceau-vert: #025428;
+  --color-sceau-jaune: #FCCA02;
+  --color-rouge: #DC241F;
+  --color-papier: #F7F5EF;
+  --color-encre: #14201C;
+  --color-gris: #5B6B62;
+
+  /* Police de tout le site (citoyens et agents) : conçue pour rester lisible
+     par tous, y compris sur petit écran ou avec une vue faible.
+     Fraunces reste réservée aux titres. */
+  --font-sans: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+  --font-titre: "Fraunces", Georgia, serif;
 }

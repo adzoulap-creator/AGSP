@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 import {
-  Bell,CalendarDays,CheckCircle2,ChevronDown,Clock3,
+  CalendarDays,CheckCircle2,ClipboardList,Clock3,
   FileText,FolderOpen,Hourglass,LayoutDashboard,
-  Loader2,LogOut,Mail,Menu,MoreVertical,Search,Settings,UserRound,Users,XCircle,
+  History,Loader2,LogOut,Menu,Search,XCircle,
 } from "lucide-react";
 
 import {
   getRendezVousAgent,
+  getDemarchesAgent,
+  getProfilAgent,
   confirmerRendezVous,
   annulerRendezVous,
 } from "../services/api";
 
-import logoAgsp from "../assets/logo.png";
+import SceauAGSP from "../composent/SceauAGSP";
+import GestionDemarches from "../composent/GestionDemarches";
+import { genererPdfRendezVous } from "../services/pdfRendezVous";
+import sceauPdf from "../assets/sceau-pdf.png?inline";
 
 const ONGLETS = [
   { cle: "en_attente", label: "En attente", couleur: "jaune" },
@@ -22,15 +25,19 @@ const ONGLETS = [
   { cle: "refuse", label: "Annulés", couleur: "rouge" },
 ];
 
+// Tri alphabétique à la française (accents et majuscules compris).
+const comparerNoms = (a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" });
+
 const NAVIGATION = [
   { label: "Tableau de bord", icone: LayoutDashboard},
   { label: "Rendez-vous", icone: CalendarDays },
-  { label: "Citoyens", icone: Users },
+  { label: "Démarches", icone: ClipboardList },
+  { label: "Historique des rendez-vous", icone: History },
   { label: "Dossiers", icone: FolderOpen },
 ];
 
 function TableauDeBord() {
-  const nom = localStorage.getItem("agentNom") || "Agent";
+  const nomStocke = localStorage.getItem("agentNom") || "Agent";
   const [rendezVous, setRendezVous] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(null);
@@ -40,10 +47,21 @@ function TableauDeBord() {
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [vueActive, setVueActive] = useState("Tableau de bord");
   const [periodeDossiers, setPeriodeDossiers] = useState("jour");
+  const [demarcheDossiers, setDemarcheDossiers] = useState("");
+  const [demarches, setDemarches] = useState([]);
+  const [etatDemarches, setEtatDemarches] = useState("chargement");
+  const [profil, setProfil] = useState(null);
+  const nom = profil?.nom || nomStocke;
+  const administration = profil?.administration;
+  const lieuAdministration = administration
+    ? [administration.adresse, administration.ville].filter(Boolean).join(", ")
+    : "";
 
-  useEffect(() => {
-    chargerRendezVous();
-  }, []);
+  // La vue d'ensemble ne montre que les demandes à traiter ;
+  // la rubrique « Rendez-vous » garde tous les statuts.
+  const vueEnsemble = vueActive === "Tableau de bord";
+  const ongletAffiche = vueEnsemble ? "en_attente" : ongletActif;
+  const rechercheUtile = vueEnsemble || vueActive === "Rendez-vous";
 
   const chargerRendezVous = async () => {
     setChargement(true);
@@ -57,6 +75,45 @@ function TableauDeBord() {
     } finally {
       setChargement(false);
     }
+  };
+
+  // Premier chargement : chargement vaut déjà true et erreur null au départ,
+  // on met seulement à jour l'état quand la réponse arrive.
+  useEffect(() => {
+    getRendezVousAgent()
+      .then((data) => setRendezVous(Array.isArray(data) ? data : []))
+      .catch((err) => setErreur(err.message || "Impossible de charger les rendez-vous."))
+      .finally(() => setChargement(false));
+
+    getDemarchesAgent()
+      .then((data) => {
+        setDemarches(Array.isArray(data) ? [...data].sort(comparerNoms) : []);
+        setEtatDemarches("pret");
+      })
+      .catch(() => setEtatDemarches("erreur"));
+
+    // En cas d'échec, l'en-tête garde simplement le nom enregistré à la connexion.
+    getProfilAgent().then(setProfil).catch(() => {});
+  }, []);
+
+  const rechargerDemarches = () => {
+    setEtatDemarches("chargement");
+    getDemarchesAgent()
+      .then((data) => {
+        setDemarches(Array.isArray(data) ? [...data].sort(comparerNoms) : []);
+        setEtatDemarches("pret");
+      })
+      .catch(() => setEtatDemarches("erreur"));
+  };
+
+  // Après un ajout ou une modification dans « Services ». Si le nom change,
+  // on recharge les rendez-vous, qui affichent le nom de la démarche.
+  const mettreAJourDemarche = (demarche) => {
+    const ancienne = demarches.find((d) => d.id === demarche.id);
+    setDemarches((liste) =>
+      [...liste.filter((d) => d.id !== demarche.id), demarche].sort(comparerNoms)
+    );
+    if (ancienne && ancienne.nom !== demarche.nom) chargerRendezVous();
   };
 
   const gererConfirmer = async (rdvId) => {
@@ -125,7 +182,7 @@ function TableauDeBord() {
 
   const rendezVousFiltres = useMemo(() => {
     return rendezVous.filter((rdv) => {
-      const correspondAuStatut = rdv.statut === ongletActif;
+      const correspondAuStatut = rdv.statut === ongletAffiche;
 
       const texte = `${rdv.prenom || ""} ${rdv.nom || ""} ${
         rdv.demarche || ""
@@ -135,7 +192,11 @@ function TableauDeBord() {
 
       return correspondAuStatut && correspondRecherche;
     });
-  }, [rendezVous, ongletActif, recherche]);
+  }, [rendezVous, ongletAffiche, recherche]);
+
+  // Seuls les rendez-vous en attente ont des actions (confirmer / annuler) :
+  // sur les onglets « Confirmés » et « Annulés », la colonne n'est pas affichée.
+  const afficherActions = rendezVousFiltres.some((rdv) => rdv.statut === "en_attente");
 
 
   const formaterNom = (rdv) => {
@@ -216,39 +277,34 @@ function TableauDeBord() {
     );
   }, [rendezVous, periodeDossiers]);
 
+  // Les dossiers se consultent et s'exportent toujours démarche par démarche.
+  // On les repère par identifiant : un renommage ne perd pas la sélection et
+  // deux démarches ne sont jamais confondues.
+  const demarchesDisponibles = useMemo(() => {
+    const parId = new Map(demarches.map((d) => [d.id, { id: d.id, nom: d.nom, actif: d.actif }]));
+    rendezVous.forEach((rdv) => {
+      if (rdv.demarche_id && !parId.has(rdv.demarche_id)) {
+        parId.set(rdv.demarche_id, { id: rdv.demarche_id, nom: rdv.demarche, actif: true });
+      }
+    });
+    return [...parId.values()].sort(comparerNoms);
+  }, [demarches, rendezVous]);
+  const demarcheChoisie =
+    demarchesDisponibles.find((d) => String(d.id) === demarcheDossiers) || demarchesDisponibles[0] || null;
+  const dossiersAffiches = rendezVousParPeriode
+    .filter((rdv) => demarcheChoisie && rdv.demarche_id === demarcheChoisie.id)
+    .sort((a, b) => `${a.date} ${a.heure}`.localeCompare(`${b.date} ${b.heure}`));
+
 
   const telechargerListePDF = () => {
-    const document = new jsPDF();
-
-    document.setFontSize(16);
-    document.text("AGSP - Liste des rendez-vous", 14, 18);
-
-    document.setFontSize(10);
-    const libellePeriode = {
-      jour: "Aujourd'hui",
-      semaine: "Cette semaine",
-      mois: "Ce mois",
-    }[periodeDossiers];
-
-    document.text(`Période : ${libellePeriode}`, 14, 26);
-    document.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, 14, 32);
-
-    const lignes = rendezVousParPeriode.map((rdv) => [
-      formaterNom(rdv),
-      rdv.demarche || "—",
-      rdv.date || "—",
-      rdv.heure || "—",
-      obtenirBadgeStatut(rdv.statut).texte,
-    ]);
-
-    autoTable(document, {
-      startY: 38,
-      head: [["Citoyen", "Démarche", "Date", "Heure", "Statut"]],
-      body: lignes,
-      headStyles: { fillColor: [7, 122, 88] },
+    const { doc, nomFichier } = genererPdfRendezVous({
+      rendezVous: dossiersAffiches,
+      demarche: demarcheChoisie?.nom,
+      administration,
+      periode: periodeDossiers,
+      logo: sceauPdf,
     });
-
-    document.save(`rendez-vous-${periodeDossiers}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(nomFichier);
   };
 
   const obtenirBadgeStatut = (statut) => {
@@ -278,6 +334,7 @@ function TableauDeBord() {
 
   return (
     <div className="min-h-screen bg-[#EEF8F8] text-[#14352D]">
+      <title>Tableau de bord agent · AGSP</title>
       <div className="flex min-h-screen">
 
         <aside
@@ -289,26 +346,16 @@ function TableauDeBord() {
           <div>
             <div className="relative z-10 border-b border-white/10 px-6 pb-5 pt-7">
               <div className="flex flex-col items-center gap-3 text-center">
-                <img
-                    src={logoAgsp}
-                    alt="Sceau AGSP - République du Congo"
-                    className="w-25 h-25 mx-auto animate-[float_2s_ease-in-out_infinite]"
-                />
-                <style>{`
-                    @keyframes float {
-                        0%, 100% { transform: translateY(0); }
-                        50% { transform: translateY(-20px); }
-                    }
-                `}</style>
+                <SceauAGSP complet={false} className="w-25 h-25 mx-auto" />
 
                 <div>
-                  <h1 className="text-2xl font-extrabold tracking-tight">
+                  <h1 className="font-titre text-3xl font-semibold tracking-tight">
                     AGSP
                   </h1>
-                  <p className="text-sm font-semibold leading-4 text-white/90">
-                    Service Public Numérique
+                  <p className="mx-auto mt-1 max-w-[12rem] text-sm font-semibold leading-snug text-white/90 text-balance">
+                    Application de Gestion des Services Publics
                   </p>
-                  <p className="mt-1 text-xs text-white/70">
+                  <p className="mt-2 text-xs text-white/70">
                     République du Congo
                   </p>
                 </div>
@@ -380,7 +427,7 @@ function TableauDeBord() {
         <main className="min-w-0 flex-1 lg:ml-[260px]">
 
           <header className="sticky top-0 z-30 border-b border-[#DDEDEC] bg-white/90 backdrop-blur-md">
-            <div className="flex min-h-[92px] items-center gap-4 px-4 py-4 sm:px-6 lg:px-9">
+            <div className="flex min-h-[92px] flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4 sm:px-6 lg:flex-nowrap lg:px-9">
               <button
                 type="button"
                 onClick={() => setMenuMobileOuvert(true)}
@@ -388,29 +435,45 @@ function TableauDeBord() {
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div className="hidden min-w-[210px] lg:block">
-                <p className="text-2xl font-extrabold tracking-tight text-[#075C3C]">
-                  AGSP
-                </p>
-                <p className="text-xs font-semibold text-[#1A4D40]">
-                  Service Public Numérique
-                </p>
-                <p className="text-[11px] text-[#6C8580]">
-                  République du Congo
-                </p>
+              {/* L'administration de l'agent (son service public) passe en premier. */}
+              <div className="mr-auto flex min-w-0 items-center gap-3 sm:gap-4">
+                <span aria-hidden="true" className="flex h-12 w-1.5 shrink-0 flex-col overflow-hidden rounded-full sm:h-14">
+                  <span className="flex-1 bg-sceau-vert" />
+                  <span className="flex-1 bg-sceau-jaune" />
+                  <span className="flex-1 bg-rouge" />
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="font-titre text-xl font-semibold text-[#075C3C] sm:text-2xl">
+                      {administration?.nom || "Espace agent"}
+                    </span>
+                    {administration && (
+                      <span className="hidden rounded-full bg-[#E3F3EE] px-2 py-0.5 text-[11px] font-bold text-[#075C3C] sm:inline">
+                        Espace agent
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-1 hidden text-sm font-semibold text-[#1A4D40] md:block">
+                    AGSP · Application de Gestion des Services Publics
+                  </p>
+                  {lieuAdministration && <p className="text-xs text-[#6C8580]">{lieuAdministration}</p>}
+                </div>
               </div>
 
-              <div className="relative ml-auto w-full max-w-xl">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#537C72]" />
+              {rechercheUtile && (
+                <div className="relative order-last w-full lg:order-none lg:max-w-md lg:flex-1">
+                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#537C72]" />
 
-                <input
-                  type="search"
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                  placeholder="Rechercher un citoyen, un dossier, un service..."
-                  className="w-full rounded-full border border-[#D9E8E5] bg-[#F9FCFC] py-3 pl-12 pr-4 text-sm text-[#14352D] outline-none transition placeholder:text-[#91A5A0] focus:border-[#08A99B] focus:bg-white focus:ring-4 focus:ring-[#08A99B]/10"
-                />
-              </div>
+                  <input
+                    type="search"
+                    value={recherche}
+                    onChange={(e) => setRecherche(e.target.value)}
+                    placeholder="Rechercher un rendez-vous : nom, démarche, date…"
+                    aria-label="Rechercher un rendez-vous"
+                    className="w-full rounded-full border border-[#D9E8E5] bg-[#F9FCFC] py-3 pl-12 pr-4 text-sm text-[#14352D] outline-none transition placeholder:text-[#6C8580] focus:border-[#08A99B] focus:bg-white focus:ring-4 focus:ring-[#08A99B]/10"
+                  />
+                </div>
+              )}
 
 
               <div className="hidden items-center gap-3 rounded-full bg-[#F3FAF9] py-1.5 pl-1.5 pr-4 sm:flex">
@@ -432,12 +495,21 @@ function TableauDeBord() {
             {vueActive === "Tableau de bord" && (
             <section className="mb-7">
 
-              <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-[#0D4F3C] sm:text-3xl">
-                Bienvenu Agent, {nom}
+              <h2 className="mt-1 font-titre text-2xl font-semibold tracking-tight text-[#0D4F3C] sm:text-3xl">
+                Bienvenue, {nom}
               </h2>
 
               <p className="mt-2 text-sm text-[#66817A]">
-                Voici un aperçu de vos rendez-vous et de votre activité.
+                {administration ? (
+                  <>
+                    Votre administration :{" "}
+                    <strong className="font-semibold text-[#0D4F3C]">{administration.nom}</strong>
+                    {administration.ville ? `, ${administration.ville}` : ""}. Voici les demandes à traiter et
+                    votre activité.
+                  </>
+                ) : (
+                  "Voici les demandes à traiter et votre activité."
+                )}
               </p>
             </section>
             )}
@@ -501,56 +573,71 @@ function TableauDeBord() {
 
                     <div>
                       <h3 className="text-lg font-extrabold text-[#075C3C]">
-                        Prochains rendez-vous
+                        {vueEnsemble ? "Demandes à traiter" : "Tous les rendez-vous"}
                       </h3>
                       <p className="text-xs text-[#76918A]">
-                        Gérez les demandes de rendez-vous des citoyens.
+                        {vueEnsemble
+                          ? "Les demandes en attente de votre confirmation."
+                          : "Gérez les demandes de rendez-vous des citoyens."}
                       </p>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={chargerRendezVous}
-                    className="rounded-xl border border-[#BFE3DA] px-4 py-2 text-sm font-semibold text-[#087A5B] transition hover:bg-[#EFFAF7]"
-                  >
-                    Actualiser
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {vueEnsemble && (
+                      <button
+                        type="button"
+                        onClick={() => setVueActive("Rendez-vous")}
+                        className="rounded-xl bg-[#057A58] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#046B4D]"
+                      >
+                        Voir tous les rendez-vous
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={chargerRendezVous}
+                      className="rounded-xl border border-[#BFE3DA] px-4 py-2 text-sm font-semibold text-[#087A5B] transition hover:bg-[#EFFAF7]"
+                    >
+                      Actualiser
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 border-b border-[#E5EFED] px-5 py-4 sm:px-7">
-                  {ONGLETS.map((onglet) => {
-                    const nombre = rendezVous.filter(
-                      (rdv) => rdv.statut === onglet.cle
-                    ).length;
+                {!vueEnsemble && (
+                  <div className="flex flex-wrap gap-2 border-b border-[#E5EFED] px-5 py-4 sm:px-7">
+                    {ONGLETS.map((onglet) => {
+                      const nombre = rendezVous.filter(
+                        (rdv) => rdv.statut === onglet.cle
+                      ).length;
 
-                    const actif = ongletActif === onglet.cle;
+                      const actif = ongletActif === onglet.cle;
 
-                    return (
-                      <button
-                        key={onglet.cle}
-                        type="button"
-                        onClick={() => setOngletActif(onglet.cle)}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                          actif
-                            ? "bg-[#057A58] text-white shadow-md shadow-[#057A58]/20"
-                            : "border border-[#D9E9E5] bg-[#F8FCFB] text-[#52746B] hover:border-[#08A99B] hover:text-[#057A58]"
-                        }`}
-                      >
-                        {onglet.label}
-                        <span
-                          className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                      return (
+                        <button
+                          key={onglet.cle}
+                          type="button"
+                          onClick={() => setOngletActif(onglet.cle)}
+                          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                             actif
-                              ? "bg-white/20 text-white"
-                              : "bg-[#E3F2EE] text-[#397263]"
+                              ? "bg-[#057A58] text-white shadow-md shadow-[#057A58]/20"
+                              : "border border-[#D9E9E5] bg-[#F8FCFB] text-[#52746B] hover:border-[#08A99B] hover:text-[#057A58]"
                           }`}
                         >
-                          {nombre}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          {onglet.label}
+                          <span
+                            className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
+                              actif
+                                ? "bg-white/20 text-white"
+                                : "bg-[#E3F2EE] text-[#397263]"
+                            }`}
+                          >
+                            {nombre}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {chargement ? (
                   <div className="flex flex-col items-center justify-center py-20">
@@ -566,11 +653,13 @@ function TableauDeBord() {
                     </div>
 
                     <p className="mt-4 font-semibold text-[#1B5444]">
-                      Aucun rendez-vous trouvé
+                      {vueEnsemble ? "Aucune demande en attente" : "Aucun rendez-vous trouvé"}
                     </p>
 
                     <p className="mt-1 text-sm text-[#76918A]">
-                      Aucun rendez-vous ne correspond à cette catégorie.
+                      {vueEnsemble
+                        ? "Tout est à jour : aucune demande n'attend votre confirmation."
+                        : "Aucun rendez-vous ne correspond à cette catégorie."}
                     </p>
                   </div>
                 ) : (
@@ -583,7 +672,7 @@ function TableauDeBord() {
                           <th className="px-6 py-4">Date</th>
                           <th className="px-6 py-4">Heure</th>
                           <th className="px-6 py-4">Statut</th>
-                          <th className="px-6 py-4 text-right">Actions</th>
+                          {afficherActions && <th className="px-6 py-4 text-right">Actions</th>}
                         </tr>
                       </thead>
 
@@ -639,45 +728,37 @@ function TableauDeBord() {
                                 </span>
                               </td>
 
-                              <td className="px-6 py-4">
-                                {rdv.statut === "en_attente" ? (
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => gererConfirmer(rdv.id)}
-                                      disabled={traitement}
-                                      className="inline-flex items-center gap-2 rounded-lg bg-[#057A58] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#046B4D] disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      {traitement ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <CheckCircle2 className="h-4 w-4" />
-                                      )}
-                                      Confirmer
-                                    </button>
+                              {afficherActions && (
+                                <td className="px-6 py-4">
+                                  {rdv.statut === "en_attente" && (
+                                    <div className="flex justify-end gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => gererConfirmer(rdv.id)}
+                                        disabled={traitement}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-[#057A58] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#046B4D] disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {traitement ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <CheckCircle2 className="h-4 w-4" />
+                                        )}
+                                        Confirmer
+                                      </button>
 
-                                    <button
-                                      type="button"
-                                      onClick={() => gererAnnuler(rdv.id)}
-                                      disabled={traitement}
-                                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                      Annuler
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex justify-end">
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-2 text-[#50736A] transition hover:bg-[#EAF6F3] hover:text-[#057A58]"
-                                      aria-label="Plus d'actions"
-                                    >
-                                      <MoreVertical className="h-5 w-5" />
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
+                                      <button
+                                        type="button"
+                                        onClick={() => gererAnnuler(rdv.id)}
+                                        disabled={traitement}
+                                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                        Annuler
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -688,23 +769,23 @@ function TableauDeBord() {
               </section>
             )}
 
-            {vueActive === "Citoyens" && (
+            {vueActive === "Historique des rendez-vous" && (
               <section className="overflow-hidden rounded-3xl border border-[#DDEBE8] bg-white shadow-[0_12px_35px_rgba(17,89,72,0.06)]">
                 <div className="flex items-center gap-3 border-b border-[#E5EFED] px-5 py-5 sm:px-7">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E2F8F2] text-[#067A57]">
-                    <Users className="h-6 w-6" />
+                    <History className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-extrabold text-[#075C3C]">Citoyens</h3>
+                    <h3 className="text-lg font-extrabold text-[#075C3C]">Historique des rendez-vous</h3>
                     <p className="text-xs text-[#76918A]">
-                      Toutes les personnes ayant déjà pris rendez-vous.
+                      Chaque citoyen ayant déjà pris rendez-vous, avec le nombre de rendez-vous et sa dernière démarche.
                     </p>
                   </div>
                 </div>
 
                 {citoyensUniques.length === 0 ? (
                   <div className="px-6 py-16 text-center">
-                    <p className="font-semibold text-[#1B5444]">Aucun citoyen trouvé</p>
+                    <p className="font-semibold text-[#1B5444]">Aucun rendez-vous dans l'historique</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -743,6 +824,15 @@ function TableauDeBord() {
               </section>
             )}
 
+            {vueActive === "Démarches" && (
+              <GestionDemarches
+                demarches={demarches}
+                etat={etatDemarches}
+                onMiseAJour={mettreAJourDemarche}
+                onRecharger={rechargerDemarches}
+              />
+            )}
+
             {vueActive === "Dossiers" && (
               <section className="overflow-hidden rounded-3xl border border-[#DDEBE8] bg-white shadow-[0_12px_35px_rgba(17,89,72,0.06)]">
                 <div className="flex flex-col gap-4 border-b border-[#E5EFED] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
@@ -753,7 +843,7 @@ function TableauDeBord() {
                     <div>
                       <h3 className="text-lg font-extrabold text-[#075C3C]">Dossiers</h3>
                       <p className="text-xs text-[#76918A]">
-                        Consultez et exportez vos rendez-vous par période.
+                        Consultez et exportez les rendez-vous d'une démarche, par période.
                       </p>
                     </div>
                   </div>
@@ -761,37 +851,61 @@ function TableauDeBord() {
                   <button
                     type="button"
                     onClick={telechargerListePDF}
-                    className="rounded-xl bg-[#057A58] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#046B4D]"
+                    disabled={!demarcheChoisie}
+                    className="rounded-xl bg-[#057A58] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#046B4D] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Télécharger la liste (PDF)
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 border-b border-[#E5EFED] px-5 py-4 sm:px-7">
-                  {[
-                    { cle: "jour", label: "Aujourd'hui" },
-                    { cle: "semaine", label: "Cette semaine" },
-                    { cle: "mois", label: "Ce mois" },
-                  ].map((option) => (
-                    <button
-                      key={option.cle}
-                      type="button"
-                      onClick={() => setPeriodeDossiers(option.cle)}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        periodeDossiers === option.cle
-                          ? "bg-[#057A58] text-white shadow-md shadow-[#057A58]/20"
-                          : "border border-[#D9E9E5] bg-[#F8FCFB] text-[#52746B] hover:border-[#08A99B] hover:text-[#057A58]"
-                      }`}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[#E5EFED] px-5 py-4 sm:px-7">
+                  <label className="flex items-center gap-3 text-sm font-semibold text-[#1A4D40]">
+                    Démarche
+                    <select
+                      value={demarcheChoisie ? String(demarcheChoisie.id) : ""}
+                      onChange={(e) => setDemarcheDossiers(e.target.value)}
+                      disabled={demarchesDisponibles.length === 0}
+                      className="min-w-[13rem] rounded-xl border border-[#BFD8D1] bg-white px-3 py-2 text-sm font-semibold text-[#075C3C] focus:border-[#057A58] focus:outline-none focus:ring-2 focus:ring-[#057A58]/20"
                     >
-                      {option.label}
-                    </button>
-                  ))}
+                      {demarchesDisponibles.length === 0 && <option value="">Aucune démarche</option>}
+                      {demarchesDisponibles.map((demarche) => (
+                        <option key={demarche.id} value={String(demarche.id)}>
+                          {demarche.actif ? demarche.nom : `${demarche.nom} (suspendue)`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <span aria-hidden="true" className="hidden h-6 w-px bg-[#E5EFED] sm:block" />
+
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { cle: "jour", label: "Aujourd'hui" },
+                      { cle: "semaine", label: "Cette semaine" },
+                      { cle: "mois", label: "Ce mois" },
+                    ].map((option) => (
+                      <button
+                        key={option.cle}
+                        type="button"
+                        onClick={() => setPeriodeDossiers(option.cle)}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          periodeDossiers === option.cle
+                            ? "bg-[#057A58] text-white shadow-md shadow-[#057A58]/20"
+                            : "border border-[#D9E9E5] bg-[#F8FCFB] text-[#52746B] hover:border-[#08A99B] hover:text-[#057A58]"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {rendezVousParPeriode.length === 0 ? (
+                {dossiersAffiches.length === 0 ? (
                   <div className="px-6 py-16 text-center">
                     <p className="font-semibold text-[#1B5444]">
-                      Aucun rendez-vous sur cette période
+                      {demarcheChoisie
+                        ? `Aucun rendez-vous pour « ${demarcheChoisie.nom} » sur cette période`
+                        : "Aucun rendez-vous pour le moment"}
                     </p>
                   </div>
                 ) : (
@@ -800,7 +914,6 @@ function TableauDeBord() {
                       <thead className="bg-[#EDF8F7] text-xs font-bold uppercase tracking-wide text-[#397263]">
                         <tr>
                           <th className="px-6 py-4">Citoyen</th>
-                          <th className="px-6 py-4">Démarche</th>
                           <th className="px-6 py-4">Date</th>
                           <th className="px-6 py-4">Heure</th>
                           <th className="px-6 py-4">Statut</th>
@@ -808,16 +921,13 @@ function TableauDeBord() {
                       </thead>
 
                       <tbody className="divide-y divide-[#E5EFED]">
-                        {rendezVousParPeriode.map((rdv) => {
+                        {dossiersAffiches.map((rdv) => {
                           const badge = obtenirBadgeStatut(rdv.statut);
 
                           return (
                             <tr key={rdv.id} className="transition hover:bg-[#F8FCFB]">
                               <td className="px-6 py-4 font-semibold text-[#164E3F]">
                                 {formaterNom(rdv)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-[#45675E]">
-                                {rdv.demarche || "—"}
                               </td>
                               <td className="px-6 py-4 text-sm text-[#45675E]">
                                 {rdv.date || "—"}

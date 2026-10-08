@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import NavBar from "../composent/navBar";
+import ParcoursEtapes from "../composent/ParcoursEtapes";
 import AdministrationCard from "../composent/AdministrationCard";
 import { getAdministrations } from "../services/api";
 
@@ -24,20 +25,8 @@ function ChoixAdministratif() {
     <div className="min-h-screen bg-[#F7F5EF]">
       <NavBar />
 
-      <div className="max-w-3xl mx-auto px-6 pt-10">
-        <div className="flex items-center gap-2 text-xs text-[#5B6B62]">
-          <span className="text-vert font-semibold">Étape 1 sur 5</span>
-          <span>·</span>
-          <span>Choix de l'administration</span>
-        </div>
-        <div className="flex gap-1.5 mt-3 mb-10">
-          <div className="h-1 flex-1 rounded-full bg-vert"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-          <div className="h-1 flex-1 rounded-full bg-[#DDD7C7]"></div>
-        </div>
-      </div>
+      <title>Choisir une administration · AGSP</title>
+      <ParcoursEtapes etape={1} />
 
       <div className="max-w-3xl mx-auto px-6 pb-16">
         <span className="inline-block text-xs tracking-[0.18em] uppercase text-vert font-semibold bg-vert/10 border border-vert/30 px-3 py-1 rounded-full mb-4">
