@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from citoyens.models import RendezVous
+from citoyens.models import Demarche, RendezVous
 
 
 class RendezVousAgentSerializer(serializers.ModelSerializer):
@@ -10,3 +10,32 @@ class RendezVousAgentSerializer(serializers.ModelSerializer):
     class Meta:
         model = RendezVous
         fields = ['id', 'nom', 'prenom', 'email', 'telephone', 'statut', 'demarche', 'date', 'heure']
+
+
+class DemarcheAgentSerializer(serializers.ModelSerializer):
+    """Démarche telle que l'agent la gère. L'administration n'est jamais
+    modifiable ici : c'est toujours celle de l'agent connecté."""
+
+    duree_minutes = serializers.IntegerField(
+        min_value=5,
+        max_value=240,
+        required=False,
+        error_messages={
+            "min_value": "La durée doit être d'au moins 5 minutes.",
+            "max_value": "La durée ne peut pas dépasser 240 minutes (4 heures).",
+            "invalid": "Indiquez une durée en minutes.",
+        },
+    )
+
+    class Meta:
+        model = Demarche
+        fields = ["id", "nom", "description", "duree_minutes", "actif"]
+        extra_kwargs = {
+            "nom": {
+                "error_messages": {
+                    "blank": "Le nom de la démarche est obligatoire.",
+                    "required": "Le nom de la démarche est obligatoire.",
+                    "max_length": "Le nom ne doit pas dépasser 100 caractères.",
+                }
+            },
+        }
