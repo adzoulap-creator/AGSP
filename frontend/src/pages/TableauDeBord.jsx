@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,CheckCircle2,ClipboardList,Clock3,
   FileText,FolderOpen,Hourglass,LayoutDashboard,
-  Loader2,LogOut,Menu,Search,Users,XCircle,
+  History,Loader2,LogOut,Menu,Search,XCircle,
 } from "lucide-react";
 
 import {
@@ -29,7 +29,7 @@ const NAVIGATION = [
   { label: "Tableau de bord", icone: LayoutDashboard},
   { label: "Rendez-vous", icone: CalendarDays },
   { label: "Démarches", icone: ClipboardList },
-  { label: "Citoyens", icone: Users },
+  { label: "Historique des rendez-vous", icone: History },
   { label: "Dossiers", icone: FolderOpen },
 ];
 
@@ -763,23 +763,23 @@ function TableauDeBord() {
               </section>
             )}
 
-            {vueActive === "Citoyens" && (
+            {vueActive === "Historique des rendez-vous" && (
               <section className="overflow-hidden rounded-3xl border border-[#DDEBE8] bg-white shadow-[0_12px_35px_rgba(17,89,72,0.06)]">
                 <div className="flex items-center gap-3 border-b border-[#E5EFED] px-5 py-5 sm:px-7">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#E2F8F2] text-[#067A57]">
-                    <Users className="h-6 w-6" />
+                    <History className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-extrabold text-[#075C3C]">Citoyens</h3>
+                    <h3 className="text-lg font-extrabold text-[#075C3C]">Historique des rendez-vous</h3>
                     <p className="text-xs text-[#76918A]">
-                      Toutes les personnes ayant déjà pris rendez-vous.
+                      Chaque citoyen ayant déjà pris rendez-vous, avec le nombre de rendez-vous et sa dernière démarche.
                     </p>
                   </div>
                 </div>
 
                 {citoyensUniques.length === 0 ? (
                   <div className="px-6 py-16 text-center">
-                    <p className="font-semibold text-[#1B5444]">Aucun citoyen trouvé</p>
+                    <p className="font-semibold text-[#1B5444]">Aucun rendez-vous dans l'historique</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
