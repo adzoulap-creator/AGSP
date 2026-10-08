@@ -86,9 +86,14 @@ function pastilleStatut(doc, cellule, statut) {
   doc.text(s.texte, x + 3, y + hauteur / 2, { baseline: "middle" });
 }
 
-// Génère la liste des rendez-vous d'une période et renvoie le document
-// avec un nom de fichier ; l'appelant décide de l'enregistrer.
-export function genererPdfRendezVous({ rendezVous, periode, agent, logo, maintenant = new Date() }) {
+// « Carte d'identité » devient « carte-d-identite » (pour le nom du fichier).
+const versSlug = (texte) =>
+  texte.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Génère la liste des rendez-vous d'une démarche sur une période et renvoie
+// le document avec un nom de fichier ; l'appelant décide de l'enregistrer.
+// Le document est toujours centré sur la démarche : c'est son titre principal.
+export function genererPdfRendezVous({ rendezVous, demarche, periode, logo, maintenant = new Date() }) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const largeur = doc.internal.pageSize.getWidth();
   const hauteur = doc.internal.pageSize.getHeight();
@@ -96,9 +101,10 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
   const genereLe = `${dateFr(maintenant, { day: "numeric", month: "long", year: "numeric" })} à ${propre(
     maintenant.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
   )}`;
+  const nomDemarche = demarche || "Démarche non précisée";
   const tries = [...rendezVous].sort((a, b) => `${a.date} ${a.heure}`.localeCompare(`${b.date} ${b.heure}`));
 
-  doc.setProperties({ title: `Liste des rendez-vous, ${periodeTexte}`, author: "AGSP", creator: "AGSP" });
+  doc.setProperties({ title: `${nomDemarche}, rendez-vous, ${periodeTexte}`, author: "AGSP", creator: "AGSP" });
 
   // En-tête : bande du drapeau, sceau, nom de l'application, et à droite qui a généré le document et quand.
   bandeDrapeau(doc, largeur, 3);
@@ -117,23 +123,28 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
 
   doc.setFontSize(8.5);
   doc.setTextColor(...GRIS);
-  doc.text("Espace agent", largeur - MARGE, 19, { align: "right" });
+  doc.text("Liste des rendez-vous", largeur - MARGE, 19, { align: "right" });
   doc.text(`Généré le ${genereLe}`, largeur - MARGE, 24.5, { align: "right" });
-  if (agent) doc.text(`par ${agent}`, largeur - MARGE, 29, { align: "right" });
 
   doc.setDrawColor(...TRAIT);
   doc.setLineWidth(0.3);
   doc.line(MARGE, 36, largeur - MARGE, 36);
 
-  // Titre du document et période.
+  // La démarche est le titre du document, la période vient juste en dessous.
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...GRIS);
+  doc.text("Rendez-vous pour la démarche", MARGE, 46);
   doc.setFont("times", "bold");
-  doc.setFontSize(22);
+  doc.setFontSize(24);
   doc.setTextColor(...ENCRE);
-  doc.text("Liste des rendez-vous", MARGE, 49);
+  const titre = doc.splitTextToSize(nomDemarche, largeur - 2 * MARGE);
+  doc.text(titre, MARGE, 55);
+  const yPeriode = 55 + (titre.length - 1) * 9.5 + 8;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...VERT);
-  doc.text(periodeTexte, MARGE, 56);
+  doc.text(periodeTexte, MARGE, yPeriode);
 
   // Résumé en quatre encadrés.
   const compter = (statut) => rendezVous.filter((r) => r.statut === statut).length;
@@ -143,7 +154,7 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
     { libelle: "En attente", valeur: compter("en_attente"), couleur: STATUTS.en_attente.couleur },
     { libelle: "Annulés", valeur: compter("refuse"), couleur: STATUTS.refuse.couleur },
   ];
-  const yCartes = 62;
+  const yCartes = yPeriode + 7;
   const hCarte = 17;
   const ecart = 4;
   const lCarte = (largeur - 2 * MARGE - 3 * ecart) / 4;
@@ -171,18 +182,17 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(...GRIS);
-    doc.text("Aucun rendez-vous sur cette période.", largeur / 2, yTableau + 11, { align: "center", baseline: "middle" });
+    doc.text("Aucun rendez-vous pour cette démarche sur cette période.", largeur / 2, yTableau + 11, { align: "center", baseline: "middle" });
   } else {
     autoTable(doc, {
       startY: yTableau,
       margin: { left: MARGE, right: MARGE, top: 22, bottom: 20 },
-      head: [["Date", "Heure", "Citoyen", "Contact", "Démarche", "Statut"]],
+      head: [["Date", "Heure", "Citoyen", "Contact", "Statut"]],
       body: tries.map((r) => [
         formaterDate(r.date),
         formaterHeure(r.heure),
         `${r.prenom || ""} ${r.nom || ""}`.trim() || "Citoyen inconnu",
         [r.telephone, r.email].filter(Boolean).join("\n") || "—",
-        r.demarche || "—",
         r.statut,
       ]),
       theme: "plain",
@@ -197,17 +207,17 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
       alternateRowStyles: { fillColor: PAPIER },
       // La colonne Contact est assez large pour qu'un email ne soit pas coupé en plein mot.
       columnStyles: {
-        0: { cellWidth: 21 },
-        1: { cellWidth: 15 },
-        2: { cellWidth: 32, fontStyle: "bold" },
-        3: { cellWidth: 53, fontSize: 8, textColor: GRIS },
-        5: { cellWidth: 24 },
+        0: { cellWidth: 24 },
+        1: { cellWidth: 18 },
+        2: { cellWidth: 46, fontStyle: "bold" },
+        3: { fontSize: 8, textColor: GRIS },
+        4: { cellWidth: 26 },
       },
       didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 5) data.cell.text = [""];
+        if (data.section === "body" && data.column.index === 4) data.cell.text = [""];
       },
       didDrawCell: (data) => {
-        if (data.section === "body" && data.column.index === 5) pastilleStatut(doc, data.cell, data.cell.raw);
+        if (data.section === "body" && data.column.index === 4) pastilleStatut(doc, data.cell, data.cell.raw);
       },
     });
   }
@@ -224,7 +234,7 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
       doc.text("AGSP", MARGE, 13);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...GRIS);
-      doc.text(`Liste des rendez-vous, ${periodeTexte} (suite)`, MARGE + 11, 13);
+      doc.text(`${nomDemarche}, ${periodeTexte} (suite)`, MARGE + 11, 13);
     }
     doc.setDrawColor(...TRAIT);
     doc.setLineWidth(0.3);
@@ -238,5 +248,5 @@ export function genererPdfRendezVous({ rendezVous, periode, agent, logo, mainten
 
   const jourIso = iso(maintenant);
   const suffixe = { jour: jourIso, semaine: `semaine-du-${iso(lundiDeLaSemaine(maintenant))}`, mois: jourIso.slice(0, 7) }[periode] || jourIso;
-  return { doc, nomFichier: `agsp-rendez-vous-${suffixe}.pdf` };
+  return { doc, nomFichier: `agsp-${versSlug(nomDemarche) || "demarche"}-${suffixe}.pdf` };
 }

@@ -40,6 +40,7 @@ function TableauDeBord() {
   const [menuMobileOuvert, setMenuMobileOuvert] = useState(false);
   const [vueActive, setVueActive] = useState("Tableau de bord");
   const [periodeDossiers, setPeriodeDossiers] = useState("jour");
+  const [demarcheDossiers, setDemarcheDossiers] = useState("");
 
   const chargerRendezVous = async () => {
     setChargement(true);
@@ -225,12 +226,24 @@ function TableauDeBord() {
     );
   }, [rendezVous, periodeDossiers]);
 
+  // Les dossiers se consultent et s'exportent toujours démarche par démarche.
+  const demarchesDisponibles = useMemo(
+    () => [...new Set(rendezVous.map((rdv) => rdv.demarche).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")),
+    [rendezVous]
+  );
+  const demarcheChoisie = demarchesDisponibles.includes(demarcheDossiers)
+    ? demarcheDossiers
+    : demarchesDisponibles[0] || "";
+  const dossiersAffiches = rendezVousParPeriode
+    .filter((rdv) => rdv.demarche === demarcheChoisie)
+    .sort((a, b) => `${a.date} ${a.heure}`.localeCompare(`${b.date} ${b.heure}`));
+
 
   const telechargerListePDF = () => {
     const { doc, nomFichier } = genererPdfRendezVous({
-      rendezVous: rendezVousParPeriode,
+      rendezVous: dossiersAffiches,
+      demarche: demarcheChoisie,
       periode: periodeDossiers,
-      agent: nom,
       logo: sceauPdf,
     });
     doc.save(nomFichier);
@@ -729,7 +742,7 @@ function TableauDeBord() {
                     <div>
                       <h3 className="text-lg font-extrabold text-[#075C3C]">Dossiers</h3>
                       <p className="text-xs text-[#76918A]">
-                        Consultez et exportez vos rendez-vous par période.
+                        Consultez et exportez les rendez-vous d'une démarche, par période.
                       </p>
                     </div>
                   </div>
@@ -737,37 +750,61 @@ function TableauDeBord() {
                   <button
                     type="button"
                     onClick={telechargerListePDF}
-                    className="rounded-xl bg-[#057A58] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#046B4D]"
+                    disabled={!demarcheChoisie}
+                    className="rounded-xl bg-[#057A58] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#046B4D] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Télécharger la liste (PDF)
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-2 border-b border-[#E5EFED] px-5 py-4 sm:px-7">
-                  {[
-                    { cle: "jour", label: "Aujourd'hui" },
-                    { cle: "semaine", label: "Cette semaine" },
-                    { cle: "mois", label: "Ce mois" },
-                  ].map((option) => (
-                    <button
-                      key={option.cle}
-                      type="button"
-                      onClick={() => setPeriodeDossiers(option.cle)}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        periodeDossiers === option.cle
-                          ? "bg-[#057A58] text-white shadow-md shadow-[#057A58]/20"
-                          : "border border-[#D9E9E5] bg-[#F8FCFB] text-[#52746B] hover:border-[#08A99B] hover:text-[#057A58]"
-                      }`}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[#E5EFED] px-5 py-4 sm:px-7">
+                  <label className="flex items-center gap-3 text-sm font-semibold text-[#1A4D40]">
+                    Démarche
+                    <select
+                      value={demarcheChoisie}
+                      onChange={(e) => setDemarcheDossiers(e.target.value)}
+                      disabled={demarchesDisponibles.length === 0}
+                      className="min-w-[13rem] rounded-xl border border-[#BFD8D1] bg-white px-3 py-2 text-sm font-semibold text-[#075C3C] focus:border-[#057A58] focus:outline-none focus:ring-2 focus:ring-[#057A58]/20"
                     >
-                      {option.label}
-                    </button>
-                  ))}
+                      {demarchesDisponibles.length === 0 && <option value="">Aucune démarche</option>}
+                      {demarchesDisponibles.map((demarche) => (
+                        <option key={demarche} value={demarche}>
+                          {demarche}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <span aria-hidden="true" className="hidden h-6 w-px bg-[#E5EFED] sm:block" />
+
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { cle: "jour", label: "Aujourd'hui" },
+                      { cle: "semaine", label: "Cette semaine" },
+                      { cle: "mois", label: "Ce mois" },
+                    ].map((option) => (
+                      <button
+                        key={option.cle}
+                        type="button"
+                        onClick={() => setPeriodeDossiers(option.cle)}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                          periodeDossiers === option.cle
+                            ? "bg-[#057A58] text-white shadow-md shadow-[#057A58]/20"
+                            : "border border-[#D9E9E5] bg-[#F8FCFB] text-[#52746B] hover:border-[#08A99B] hover:text-[#057A58]"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {rendezVousParPeriode.length === 0 ? (
+                {dossiersAffiches.length === 0 ? (
                   <div className="px-6 py-16 text-center">
                     <p className="font-semibold text-[#1B5444]">
-                      Aucun rendez-vous sur cette période
+                      {demarcheChoisie
+                        ? `Aucun rendez-vous pour « ${demarcheChoisie} » sur cette période`
+                        : "Aucun rendez-vous pour le moment"}
                     </p>
                   </div>
                 ) : (
@@ -776,7 +813,6 @@ function TableauDeBord() {
                       <thead className="bg-[#EDF8F7] text-xs font-bold uppercase tracking-wide text-[#397263]">
                         <tr>
                           <th className="px-6 py-4">Citoyen</th>
-                          <th className="px-6 py-4">Démarche</th>
                           <th className="px-6 py-4">Date</th>
                           <th className="px-6 py-4">Heure</th>
                           <th className="px-6 py-4">Statut</th>
@@ -784,16 +820,13 @@ function TableauDeBord() {
                       </thead>
 
                       <tbody className="divide-y divide-[#E5EFED]">
-                        {rendezVousParPeriode.map((rdv) => {
+                        {dossiersAffiches.map((rdv) => {
                           const badge = obtenirBadgeStatut(rdv.statut);
 
                           return (
                             <tr key={rdv.id} className="transition hover:bg-[#F8FCFB]">
                               <td className="px-6 py-4 font-semibold text-[#164E3F]">
                                 {formaterNom(rdv)}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-[#45675E]">
-                                {rdv.demarche || "—"}
                               </td>
                               <td className="px-6 py-4 text-sm text-[#45675E]">
                                 {rdv.date || "—"}
