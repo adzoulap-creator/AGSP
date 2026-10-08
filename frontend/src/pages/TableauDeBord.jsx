@@ -302,13 +302,13 @@ function TableauDeBord() {
                 <SceauAGSP complet={false} className="w-25 h-25 mx-auto" />
 
                 <div>
-                  <h1 className="font-titre text-2xl font-semibold tracking-tight">
+                  <h1 className="font-titre text-3xl font-semibold tracking-tight">
                     AGSP
                   </h1>
-                  <p className="text-sm font-semibold leading-4 text-white/90">
-                    Service Public Numérique
+                  <p className="mx-auto mt-1 max-w-[12rem] text-sm font-semibold leading-snug text-white/90 text-balance">
+                    Application de Gestion des Services Publics
                   </p>
-                  <p className="mt-1 text-xs text-white/70">
+                  <p className="mt-2 text-xs text-white/70">
                     République du Congo
                   </p>
                 </div>
@@ -388,16 +388,24 @@ function TableauDeBord() {
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div className="hidden min-w-[210px] lg:block">
-                <p className="text-2xl font-extrabold tracking-tight text-[#075C3C]">
-                  AGSP
-                </p>
-                <p className="text-xs font-semibold text-[#1A4D40]">
-                  Service Public Numérique
-                </p>
-                <p className="text-[11px] text-[#6C8580]">
-                  République du Congo
-                </p>
+              <div className="hidden shrink-0 items-center gap-4 lg:flex">
+                <span aria-hidden="true" className="flex h-14 w-1.5 flex-col overflow-hidden rounded-full">
+                  <span className="flex-1 bg-sceau-vert" />
+                  <span className="flex-1 bg-sceau-jaune" />
+                  <span className="flex-1 bg-rouge" />
+                </span>
+                <div className="leading-tight">
+                  <p className="flex items-center gap-2">
+                    <span className="font-titre text-2xl font-semibold text-[#075C3C]">AGSP</span>
+                    <span className="rounded-full bg-[#E3F3EE] px-2 py-0.5 text-[11px] font-bold text-[#075C3C]">
+                      Espace agent
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#1A4D40]">
+                    Application de Gestion des Services Publics
+                  </p>
+                  <p className="text-xs text-[#6C8580]">République du Congo</p>
+                </div>
               </div>
 
               <div className="relative ml-auto w-full max-w-xl">

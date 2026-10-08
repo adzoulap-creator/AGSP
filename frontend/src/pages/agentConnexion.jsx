@@ -68,12 +68,11 @@ function AgentConnexion() {
               </p>
 
               <div className="mb-8">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/70">
-                  République du Congo
+                <p className="font-titre text-xl font-semibold">AGSP</p>
+                <p className="mt-1 text-sm text-white/85">
+                  Application de Gestion des Services Publics
                 </p>
-                <p className="mt-1 text-xs uppercase tracking-[0.12em] text-white/70">
-                  Service Public Numérique
-                </p>
+                <p className="mt-1 text-xs text-white/70">République du Congo</p>
               </div>
 
               <button
