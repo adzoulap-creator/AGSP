@@ -93,7 +93,7 @@ const versSlug = (texte) =>
 // Génère la liste des rendez-vous d'une démarche sur une période et renvoie
 // le document avec un nom de fichier ; l'appelant décide de l'enregistrer.
 // Le document est toujours centré sur la démarche : c'est son titre principal.
-export function genererPdfRendezVous({ rendezVous, demarche, periode, logo, maintenant = new Date() }) {
+export function genererPdfRendezVous({ rendezVous, demarche, administration, periode, logo, maintenant = new Date() }) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const largeur = doc.internal.pageSize.getWidth();
   const hauteur = doc.internal.pageSize.getHeight();
@@ -102,6 +102,9 @@ export function genererPdfRendezVous({ rendezVous, demarche, periode, logo, main
     maintenant.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
   )}`;
   const nomDemarche = demarche || "Démarche non précisée";
+  const nomAdministration = administration
+    ? [administration.nom, administration.ville].filter(Boolean).join(", ")
+    : "";
   const tries = [...rendezVous].sort((a, b) => `${a.date} ${a.heure}`.localeCompare(`${b.date} ${b.heure}`));
 
   doc.setProperties({ title: `${nomDemarche}, rendez-vous, ${periodeTexte}`, author: "AGSP", creator: "AGSP" });
@@ -130,17 +133,25 @@ export function genererPdfRendezVous({ rendezVous, demarche, periode, logo, main
   doc.setLineWidth(0.3);
   doc.line(MARGE, 36, largeur - MARGE, 36);
 
-  // La démarche est le titre du document, la période vient juste en dessous.
+  // L'administration (le service public), puis la démarche en titre, puis la période.
+  let yTitre = 55;
+  if (nomAdministration) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(...VERT);
+    doc.text(propre(nomAdministration), MARGE, 46);
+    yTitre = 60.5;
+  }
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   doc.setTextColor(...GRIS);
-  doc.text("Rendez-vous pour la démarche", MARGE, 46);
+  doc.text("Rendez-vous pour la démarche", MARGE, yTitre - 9);
   doc.setFont("times", "bold");
   doc.setFontSize(24);
   doc.setTextColor(...ENCRE);
   const titre = doc.splitTextToSize(nomDemarche, largeur - 2 * MARGE);
-  doc.text(titre, MARGE, 55);
-  const yPeriode = 55 + (titre.length - 1) * 9.5 + 8;
+  doc.text(titre, MARGE, yTitre);
+  const yPeriode = yTitre + (titre.length - 1) * 9.5 + 8;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...VERT);
@@ -234,7 +245,7 @@ export function genererPdfRendezVous({ rendezVous, demarche, periode, logo, main
       doc.text("AGSP", MARGE, 13);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...GRIS);
-      doc.text(`${nomDemarche}, ${periodeTexte} (suite)`, MARGE + 11, 13);
+      doc.text(`${nomAdministration ? `${nomAdministration} · ` : ""}${nomDemarche}, ${periodeTexte} (suite)`, MARGE + 11, 13);
     }
     doc.setDrawColor(...TRAIT);
     doc.setLineWidth(0.3);
