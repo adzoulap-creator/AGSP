@@ -5,7 +5,7 @@ import autoTable from "jspdf-autotable";
 import {
   CalendarDays,CheckCircle2,Clock3,
   FileText,FolderOpen,Hourglass,LayoutDashboard,
-  Loader2,LogOut,Menu,MoreVertical,Search,Users,XCircle,
+  Loader2,LogOut,Menu,Search,Users,XCircle,
 } from "lucide-react";
 
 import {
@@ -141,6 +141,10 @@ function TableauDeBord() {
       return correspondAuStatut && correspondRecherche;
     });
   }, [rendezVous, ongletActif, recherche]);
+
+  // Seuls les rendez-vous en attente ont des actions (confirmer / annuler) :
+  // sur les onglets « Confirmés » et « Annulés », la colonne n'est pas affichée.
+  const afficherActions = rendezVousFiltres.some((rdv) => rdv.statut === "en_attente");
 
 
   const formaterNom = (rdv) => {
@@ -295,16 +299,7 @@ function TableauDeBord() {
           <div>
             <div className="relative z-10 border-b border-white/10 px-6 pb-5 pt-7">
               <div className="flex flex-col items-center gap-3 text-center">
-                <SceauAGSP
-                    complet={false}
-                    className="w-25 h-25 mx-auto animate-[float_2s_ease-in-out_infinite]"
-                />
-                <style>{`
-                    @keyframes float {
-                        0%, 100% { transform: translateY(0); }
-                        50% { transform: translateY(-20px); }
-                    }
-                `}</style>
+                <SceauAGSP complet={false} className="w-25 h-25 mx-auto" />
 
                 <div>
                   <h1 className="font-titre text-2xl font-semibold tracking-tight">
@@ -588,7 +583,7 @@ function TableauDeBord() {
                           <th className="px-6 py-4">Date</th>
                           <th className="px-6 py-4">Heure</th>
                           <th className="px-6 py-4">Statut</th>
-                          <th className="px-6 py-4 text-right">Actions</th>
+                          {afficherActions && <th className="px-6 py-4 text-right">Actions</th>}
                         </tr>
                       </thead>
 
@@ -644,45 +639,37 @@ function TableauDeBord() {
                                 </span>
                               </td>
 
-                              <td className="px-6 py-4">
-                                {rdv.statut === "en_attente" ? (
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => gererConfirmer(rdv.id)}
-                                      disabled={traitement}
-                                      className="inline-flex items-center gap-2 rounded-lg bg-[#057A58] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#046B4D] disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      {traitement ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <CheckCircle2 className="h-4 w-4" />
-                                      )}
-                                      Confirmer
-                                    </button>
+                              {afficherActions && (
+                                <td className="px-6 py-4">
+                                  {rdv.statut === "en_attente" && (
+                                    <div className="flex justify-end gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => gererConfirmer(rdv.id)}
+                                        disabled={traitement}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-[#057A58] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#046B4D] disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {traitement ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <CheckCircle2 className="h-4 w-4" />
+                                        )}
+                                        Confirmer
+                                      </button>
 
-                                    <button
-                                      type="button"
-                                      onClick={() => gererAnnuler(rdv.id)}
-                                      disabled={traitement}
-                                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                      Annuler
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex justify-end">
-                                    <button
-                                      type="button"
-                                      className="rounded-lg p-2 text-[#50736A] transition hover:bg-[#EAF6F3] hover:text-[#057A58]"
-                                      aria-label="Plus d'actions"
-                                    >
-                                      <MoreVertical className="h-5 w-5" />
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
+                                      <button
+                                        type="button"
+                                        onClick={() => gererAnnuler(rdv.id)}
+                                        disabled={traitement}
+                                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        <XCircle className="h-4 w-4" />
+                                        Annuler
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
