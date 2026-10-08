@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { ClipboardList, Loader2, Pencil, Plus } from "lucide-react";
 import { creerDemarcheAgent, modifierDemarcheAgent } from "../services/api";
 
@@ -21,6 +21,13 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
   const idNom = useId();
   const idDuree = useId();
   const idDescription = useId();
+  const titreRef = useRef(null);
+  const nomRef = useRef(null);
+  const dureeRef = useRef(null);
+
+  // Après fermeture du formulaire, le focus revient sur le titre de la rubrique
+  // (le bouton qui l'avait ouvert peut avoir disparu entre-temps).
+  const rendreLeFocus = () => requestAnimationFrame(() => titreRef.current?.focus());
 
   const ouvrir = (demarche) => {
     setMessage(null);
@@ -36,6 +43,7 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
   const fermer = () => {
     setFormulaire(null);
     setErreurs({});
+    rendreLeFocus();
   };
 
   const enregistrer = async (e) => {
@@ -58,8 +66,16 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
             : `Modifications enregistrées pour « ${demarche.nom} ».`,
       });
       setFormulaire(null);
+      rendreLeFocus();
     } catch (err) {
-      setErreurs(err.champs && !err.champs.detail ? err.champs : { general: [err.message] });
+      // Erreurs par champ si l'API en donne ; sinon un message général (serveur indisponible…).
+      const champs = err.champs || {};
+      if (champs.nom || champs.duree_minutes) {
+        setErreurs(champs);
+        requestAnimationFrame(() => (champs.nom ? nomRef : dureeRef).current?.focus());
+      } else {
+        setErreurs({ general: [err.message] });
+      }
     } finally {
       setEnvoi(false);
     }
@@ -84,8 +100,13 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
     }
   };
 
+  const idErreur = (champ) => `${idNom}-erreur-${champ}`;
   const erreurChamp = (champ) =>
-    erreurs[champ] && <p className="mt-1.5 text-xs font-semibold text-red-600">{erreurs[champ].join(" ")}</p>;
+    erreurs[champ] && (
+      <p id={idErreur(champ)} className="mt-1.5 text-xs font-semibold text-red-600">
+        {erreurs[champ].join(" ")}
+      </p>
+    );
 
   return (
     <section className="overflow-hidden rounded-3xl border border-[#DDEBE8] bg-white shadow-[0_12px_35px_rgba(17,89,72,0.06)]">
@@ -95,7 +116,9 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
             <ClipboardList className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-lg font-extrabold text-[#075C3C]">Démarches</h3>
+            <h3 ref={titreRef} tabIndex={-1} className="text-lg font-extrabold text-[#075C3C] focus:outline-none">
+              Démarches
+            </h3>
             <p className="text-xs text-[#76918A]">
               Les démarches que les citoyens peuvent réserver auprès de votre administration.
             </p>
@@ -116,15 +139,22 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
 
       <p
         role="status"
-        className={`px-5 text-sm font-semibold empty:hidden sm:px-7 ${
-          message?.type === "erreur" ? "pt-4 text-red-600" : "pt-4 text-[#057A58]"
-        }`}
+        className={
+          message
+            ? `px-5 pt-4 text-sm font-semibold sm:px-7 ${message.type === "erreur" ? "text-red-600" : "text-[#057A58]"}`
+            : "sr-only"
+        }
       >
         {message?.texte}
       </p>
 
       {formulaire && (
-        <form onSubmit={enregistrer} noValidate className="m-5 rounded-2xl border border-[#DDEBE8] bg-[#F8FCFB] p-5 sm:m-7">
+        <form
+          key={formulaire.id ?? "ajout"}
+          onSubmit={enregistrer}
+          noValidate
+          className="m-5 rounded-2xl border border-[#DDEBE8] bg-[#F8FCFB] p-5 sm:m-7"
+        >
           <h4 className="font-bold text-[#075C3C]">
             {formulaire.mode === "ajout" ? "Nouvelle démarche" : "Modifier la démarche"}
           </h4>
@@ -141,7 +171,9 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
                 placeholder="Ex. : Carte d'identité"
                 maxLength={100}
                 autoFocus
+                ref={nomRef}
                 aria-invalid={Boolean(erreurs.nom)}
+                aria-describedby={erreurs.nom ? idErreur("nom") : undefined}
                 className={classeChamp}
               />
               {erreurChamp("nom")}
@@ -160,7 +192,9 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
                   step={5}
                   value={valeurs.duree_minutes}
                   onChange={(e) => setValeurs({ ...valeurs, duree_minutes: e.target.value })}
+                  ref={dureeRef}
                   aria-invalid={Boolean(erreurs.duree_minutes)}
+                  aria-describedby={erreurs.duree_minutes ? idErreur("duree_minutes") : undefined}
                   className={classeChamp}
                 />
                 <span className="text-sm text-[#52746B]">min</span>
@@ -197,7 +231,8 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
             <button
               type="button"
               onClick={fermer}
-              className="rounded-xl border border-[#D9E9E5] bg-white px-5 py-2.5 text-sm font-semibold text-[#52746B] transition hover:border-[#08A99B]"
+              disabled={envoi}
+              className="rounded-xl border disabled:cursor-wait disabled:opacity-60 border-[#D9E9E5] bg-white px-5 py-2.5 text-sm font-semibold text-[#52746B] transition hover:border-[#08A99B]"
             >
               Annuler
             </button>
@@ -262,7 +297,8 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
                 <button
                   type="button"
                   onClick={() => ouvrir(demarche)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#D9E9E5] bg-white px-3 py-2 text-xs font-bold text-[#057A58] transition hover:border-[#08A99B]"
+                  disabled={envoi}
+                  className="disabled:cursor-wait disabled:opacity-60 inline-flex items-center gap-2 rounded-lg border border-[#D9E9E5] bg-white px-3 py-2 text-xs font-bold text-[#057A58] transition hover:border-[#08A99B]"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                   Modifier
@@ -270,7 +306,7 @@ function GestionDemarches({ demarches, etat, onMiseAJour, onRecharger }) {
                 <button
                   type="button"
                   onClick={() => basculer(demarche)}
-                  disabled={enCours === demarche.id}
+                  disabled={envoi || enCours === demarche.id}
                   className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition disabled:cursor-wait disabled:opacity-60 ${
                     demarche.actif
                       ? "border border-red-200 bg-white text-red-600 hover:bg-red-50"

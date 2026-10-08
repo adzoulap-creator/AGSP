@@ -38,7 +38,10 @@ export async function reserverCreneau(demarcheId, dateHeureISO) {
     cache: "no-store",
   });
   if (reponse.status === 409) throw new Error("Ce créneau vient d'être pris, choisissez-en un autre.");
-  if (!reponse.ok) throw new Error("Erreur lors de la réservation du créneau");
+  if (!reponse.ok) {
+    const data = await reponse.json().catch(() => ({}));
+    throw new Error(data.detail || "Erreur lors de la réservation du créneau");
+  }
   return reponse.json();
 }
 
@@ -134,8 +137,8 @@ async function envoyerDemarche(url, methode, donnees) {
   });
   const data = await reponse.json().catch(() => ({}));
   if (!reponse.ok) {
-    const erreur = new Error(data.detail || "La démarche n'a pas pu être enregistrée.");
-    erreur.champs = data;
+    const erreur = new Error(data.detail || "La démarche n'a pas pu être enregistrée. Réessayez dans un instant.");
+    if (reponse.status === 400) erreur.champs = data;
     throw erreur;
   }
   return data;

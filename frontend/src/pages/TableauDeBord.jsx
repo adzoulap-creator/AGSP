@@ -25,6 +25,9 @@ const ONGLETS = [
   { cle: "refuse", label: "Annulés", couleur: "rouge" },
 ];
 
+// Tri alphabétique à la française (accents et majuscules compris).
+const comparerNoms = (a, b) => a.nom.localeCompare(b.nom, "fr", { sensitivity: "base" });
+
 const NAVIGATION = [
   { label: "Tableau de bord", icone: LayoutDashboard},
   { label: "Rendez-vous", icone: CalendarDays },
@@ -84,7 +87,7 @@ function TableauDeBord() {
 
     getDemarchesAgent()
       .then((data) => {
-        setDemarches(Array.isArray(data) ? data : []);
+        setDemarches(Array.isArray(data) ? [...data].sort(comparerNoms) : []);
         setEtatDemarches("pret");
       })
       .catch(() => setEtatDemarches("erreur"));
@@ -97,7 +100,7 @@ function TableauDeBord() {
     setEtatDemarches("chargement");
     getDemarchesAgent()
       .then((data) => {
-        setDemarches(Array.isArray(data) ? data : []);
+        setDemarches(Array.isArray(data) ? [...data].sort(comparerNoms) : []);
         setEtatDemarches("pret");
       })
       .catch(() => setEtatDemarches("erreur"));
@@ -108,7 +111,7 @@ function TableauDeBord() {
   const mettreAJourDemarche = (demarche) => {
     const ancienne = demarches.find((d) => d.id === demarche.id);
     setDemarches((liste) =>
-      [...liste.filter((d) => d.id !== demarche.id), demarche].sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
+      [...liste.filter((d) => d.id !== demarche.id), demarche].sort(comparerNoms)
     );
     if (ancienne && ancienne.nom !== demarche.nom) chargerRendezVous();
   };
@@ -275,25 +278,28 @@ function TableauDeBord() {
   }, [rendezVous, periodeDossiers]);
 
   // Les dossiers se consultent et s'exportent toujours démarche par démarche.
-  const demarchesDisponibles = useMemo(
-    () =>
-      [...new Set([...demarches.map((d) => d.nom), ...rendezVous.map((rdv) => rdv.demarche)].filter(Boolean))].sort(
-        (a, b) => a.localeCompare(b, "fr")
-      ),
-    [demarches, rendezVous]
-  );
-  const demarcheChoisie = demarchesDisponibles.includes(demarcheDossiers)
-    ? demarcheDossiers
-    : demarchesDisponibles[0] || "";
+  // On les repère par identifiant : un renommage ne perd pas la sélection et
+  // deux démarches ne sont jamais confondues.
+  const demarchesDisponibles = useMemo(() => {
+    const parId = new Map(demarches.map((d) => [d.id, { id: d.id, nom: d.nom, actif: d.actif }]));
+    rendezVous.forEach((rdv) => {
+      if (rdv.demarche_id && !parId.has(rdv.demarche_id)) {
+        parId.set(rdv.demarche_id, { id: rdv.demarche_id, nom: rdv.demarche, actif: true });
+      }
+    });
+    return [...parId.values()].sort(comparerNoms);
+  }, [demarches, rendezVous]);
+  const demarcheChoisie =
+    demarchesDisponibles.find((d) => String(d.id) === demarcheDossiers) || demarchesDisponibles[0] || null;
   const dossiersAffiches = rendezVousParPeriode
-    .filter((rdv) => rdv.demarche === demarcheChoisie)
+    .filter((rdv) => demarcheChoisie && rdv.demarche_id === demarcheChoisie.id)
     .sort((a, b) => `${a.date} ${a.heure}`.localeCompare(`${b.date} ${b.heure}`));
 
 
   const telechargerListePDF = () => {
     const { doc, nomFichier } = genererPdfRendezVous({
       rendezVous: dossiersAffiches,
-      demarche: demarcheChoisie,
+      demarche: demarcheChoisie?.nom,
       administration,
       periode: periodeDossiers,
       logo: sceauPdf,
@@ -856,15 +862,15 @@ function TableauDeBord() {
                   <label className="flex items-center gap-3 text-sm font-semibold text-[#1A4D40]">
                     Démarche
                     <select
-                      value={demarcheChoisie}
+                      value={demarcheChoisie ? String(demarcheChoisie.id) : ""}
                       onChange={(e) => setDemarcheDossiers(e.target.value)}
                       disabled={demarchesDisponibles.length === 0}
                       className="min-w-[13rem] rounded-xl border border-[#BFD8D1] bg-white px-3 py-2 text-sm font-semibold text-[#075C3C] focus:border-[#057A58] focus:outline-none focus:ring-2 focus:ring-[#057A58]/20"
                     >
                       {demarchesDisponibles.length === 0 && <option value="">Aucune démarche</option>}
                       {demarchesDisponibles.map((demarche) => (
-                        <option key={demarche} value={demarche}>
-                          {demarche}
+                        <option key={demarche.id} value={String(demarche.id)}>
+                          {demarche.actif ? demarche.nom : `${demarche.nom} (suspendue)`}
                         </option>
                       ))}
                     </select>
@@ -898,7 +904,7 @@ function TableauDeBord() {
                   <div className="px-6 py-16 text-center">
                     <p className="font-semibold text-[#1B5444]">
                       {demarcheChoisie
-                        ? `Aucun rendez-vous pour « ${demarcheChoisie} » sur cette période`
+                        ? `Aucun rendez-vous pour « ${demarcheChoisie.nom} » sur cette période`
                         : "Aucun rendez-vous pour le moment"}
                     </p>
                   </div>
