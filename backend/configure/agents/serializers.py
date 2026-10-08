@@ -4,12 +4,14 @@ from citoyens.models import Demarche, RendezVous
 
 class RendezVousAgentSerializer(serializers.ModelSerializer):
     demarche = serializers.CharField(source='creneau.demarche.nom')
+    # L'identifiant permet de distinguer deux démarches dans les exports.
+    demarche_id = serializers.IntegerField(source='creneau.demarche_id', read_only=True)
     date = serializers.DateField(source='creneau.date')
     heure = serializers.TimeField(source='creneau.heure')
 
     class Meta:
         model = RendezVous
-        fields = ['id', 'nom', 'prenom', 'email', 'telephone', 'statut', 'demarche', 'date', 'heure']
+        fields = ['id', 'nom', 'prenom', 'email', 'telephone', 'statut', 'demarche', 'demarche_id', 'date', 'heure']
 
 
 class DemarcheAgentSerializer(serializers.ModelSerializer):
@@ -39,3 +41,15 @@ class DemarcheAgentSerializer(serializers.ModelSerializer):
                 }
             },
         }
+
+    def validate_nom(self, valeur):
+        # Deux démarches du même nom dans une administration seraient impossibles
+        # à distinguer pour les citoyens comme dans les exports.
+        nom = valeur.strip()
+        administration = self.context["request"].user.agent.administration
+        autres = Demarche.objects.filter(administration=administration)
+        if self.instance is not None:
+            autres = autres.exclude(pk=self.instance.pk)
+        if any(existant.strip().casefold() == nom.casefold() for existant in autres.values_list("nom", flat=True)):
+            raise serializers.ValidationError("Une démarche porte déjà ce nom dans votre administration.")
+        return nom
