@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 import {
   CalendarDays,CheckCircle2,Clock3,
@@ -15,6 +13,8 @@ import {
 } from "../services/api";
 
 import SceauAGSP from "../composent/SceauAGSP";
+import { genererPdfRendezVous } from "../services/pdfRendezVous";
+import sceauPdf from "../assets/sceau-pdf.png?inline";
 
 const ONGLETS = [
   { cle: "en_attente", label: "En attente", couleur: "jaune" },
@@ -227,37 +227,13 @@ function TableauDeBord() {
 
 
   const telechargerListePDF = () => {
-    const document = new jsPDF();
-
-    document.setFontSize(16);
-    document.text("AGSP - Liste des rendez-vous", 14, 18);
-
-    document.setFontSize(10);
-    const libellePeriode = {
-      jour: "Aujourd'hui",
-      semaine: "Cette semaine",
-      mois: "Ce mois",
-    }[periodeDossiers];
-
-    document.text(`Période : ${libellePeriode}`, 14, 26);
-    document.text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, 14, 32);
-
-    const lignes = rendezVousParPeriode.map((rdv) => [
-      formaterNom(rdv),
-      rdv.demarche || "—",
-      rdv.date || "—",
-      rdv.heure || "—",
-      obtenirBadgeStatut(rdv.statut).texte,
-    ]);
-
-    autoTable(document, {
-      startY: 38,
-      head: [["Citoyen", "Démarche", "Date", "Heure", "Statut"]],
-      body: lignes,
-      headStyles: { fillColor: [7, 122, 88] },
+    const { doc, nomFichier } = genererPdfRendezVous({
+      rendezVous: rendezVousParPeriode,
+      periode: periodeDossiers,
+      agent: nom,
+      logo: sceauPdf,
     });
-
-    document.save(`rendez-vous-${periodeDossiers}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(nomFichier);
   };
 
   const obtenirBadgeStatut = (statut) => {
